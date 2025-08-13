@@ -51,26 +51,28 @@ def get_exp_to_next_level(player_data, EXP_TABLE):
         return 0
     return EXP_TABLE[current_level] - player_data["total_exp"]
 
+from .logic_pure import calculate_new_level
+
 def level_up_check(skill):
-    if skill == "Mining":
-        while player_data["mining_level"] < 99 and player_data["mining_exp"] >= EXP_TABLE[player_data["mining_level"]]:
-            player_data["mining_level"] += 1
-            show_level_up_dialog("Mining")
-    elif skill == "Woodcutting":
-        while player_data["woodcutting_level"] < 99 and player_data["woodcutting_exp"] >= EXP_TABLE[player_data["woodcutting_level"]]:
-            player_data["woodcutting_level"] += 1
-            show_level_up_dialog("Woodcutting")
-    elif skill == "Smithing":
-        while player_data["smithing_level"] < 99 and player_data["smithing_exp"] >= EXP_TABLE[player_data["smithing_level"]]:
-            player_data["smithing_level"] += 1
-            show_level_up_dialog("Smithing")
-    elif skill == "Crafting":
-        while player_data["crafting_level"] < 99 and player_data["crafting_exp"] >= EXP_TABLE[player_data["crafting_level"]]:
-            player_data["crafting_level"] += 1
-            show_level_up_dialog("Crafting")
+    skill_map = {
+        "Mining": ("mining_level", "mining_exp"),
+        "Woodcutting": ("woodcutting_level", "woodcutting_exp"),
+        "Smithing": ("smithing_level", "smithing_exp"),
+        "Crafting": ("crafting_level", "crafting_exp"),
+    }
+    if skill in skill_map:
+        level_key, exp_key = skill_map[skill]
+        old_level = player_data[level_key]
+        new_level = calculate_new_level(player_data[exp_key], old_level, EXP_TABLE)
+        if new_level > old_level:
+            for lvl in range(old_level + 1, new_level + 1):
+                player_data[level_key] = lvl
+                show_level_up_dialog(skill)
+
+from .logic_pure import get_newly_completed_achievements
 
 def check_achievements():
-    for achievement, data in ACHIEVEMENTS.items():
-        if achievement not in player_data["completed_achievements"] and data["condition"](player_data):
-            player_data["completed_achievements"].append(achievement)
-            show_achievement_dialog(achievement, data)
+    newly_completed = get_newly_completed_achievements(player_data, ACHIEVEMENTS)
+    for achievement in newly_completed:
+        player_data["completed_achievements"].append(achievement)
+        show_achievement_dialog(achievement, ACHIEVEMENTS[achievement])
