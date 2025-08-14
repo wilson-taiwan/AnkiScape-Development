@@ -19,7 +19,6 @@ bars_folder = os.path.join(current_dir, "bars")
 CRAFTED_ITEMS_FOLDER = os.path.join(current_dir, "crafteditems")
 
 CRAFTING_DATA = {
-    "None": {"level": 1, "exp": 0, "requirements": {}},
     "Soft clay": {"level": 1, "exp": 0, "requirements": {"Clay": 1}},
     "Unfired pot": {"level": 1, "exp": 6.3, "requirements": {"Soft clay": 1}},
     "Pot": {"level": 1, "exp": 6.3, "requirements": {"Unfired pot": 1}},

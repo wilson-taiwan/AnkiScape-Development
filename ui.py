@@ -58,7 +58,33 @@ from .constants import (
     ACHIEVEMENTS,
     current_dir,
 )
-from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure
+from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+
+# Lightweight context for the open Main Menu to allow dynamic UI refreshes
+_MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
+
+def refresh_skill_availability(can_smelt_any_bar: bool, can_craft_any_item: bool):
+    """Auto-enable Smithing/Crafting buttons when they become available while the menu is open.
+    Never auto-selects the skill; users must choose it explicitly. Only enables; does not disable.
+    """
+    try:
+        # Smithing
+        s_btn = _MAIN_MENU_CTX.get("smith_btn")
+        if s_btn is not None and can_smelt_any_bar and not s_btn.isEnabled():
+            s_btn.setEnabled(True)
+            s_btn.setToolTip("Smithing")
+        # Crafting
+        c_btn = _MAIN_MENU_CTX.get("craft_btn")
+        if c_btn is not None and can_craft_any_item and not c_btn.isEnabled():
+            c_btn.setEnabled(True)
+            c_btn.setToolTip("Crafting")
+        # Clear warning text if either became available
+        if (s_btn is not None and s_btn.isEnabled()) or (c_btn is not None and c_btn.isEnabled()):
+            warn = _MAIN_MENU_CTX.get("warn_label")
+            if warn is not None and hasattr(warn, "setText"):
+                warn.setText("")
+    except Exception:
+        pass
 
 
 # UI Classes
@@ -231,34 +257,166 @@ def show_main_menu(
     tabs = QTabWidget()
     tabs.setDocumentMode(True)
 
-    # Skills tab
+    # Skills tab - icon buttons like Stats
     skills_tab = QWidget()
     s_layout = QVBoxLayout(skills_tab)
     s_layout.setContentsMargins(12, 12, 12, 12)
     s_layout.setSpacing(8)
-    skill_combo = QComboBox()
-    skills = ["None", "Mining", "Woodcutting", "Smithing", "Crafting"]
-    skill_combo.addItems(skills)
-    skill_combo.setCurrentText(current_skill)
-    s_layout.addWidget(QLabel("Current Skill:"))
-    s_layout.addWidget(skill_combo)
+    s_layout.addWidget(QLabel("Select Skill to Train:"))
     warn = QLabel("")
     warn.setStyleSheet("color: red;")
-    s_layout.addWidget(warn)
 
-    def _update_warn():
-        if skill_combo.currentText() == "Smithing" and not can_smelt_any_bar:
+    selector = QWidget()
+    sel_layout = QHBoxLayout(selector)
+    sel_layout.setSpacing(12)
+    sel_layout.setContentsMargins(0, 0, 0, 0)
+
+    try:
+        from aqt.qt import QToolButton  # type: ignore
+    except Exception:
+        QToolButton = QPushButton
+
+    # Build skill buttons (include None with a generic icon)
+    skills_info = [
+        ("None", os.path.join(current_dir, "icon", "achievement_icon.png")),
+        ("Mining", os.path.join(current_dir, "icon", "mining_icon.png")),
+        ("Woodcutting", os.path.join(current_dir, "icon", "woodcutting_icon.png")),
+        ("Smithing", os.path.join(current_dir, "icon", "smithing_icon.png")),
+        ("Crafting", os.path.join(current_dir, "icon", "crafting_icon.png")),
+    ]
+
+    btn_group = QButtonGroup()
+    btn_group.setExclusive(True)
+    name_to_btn = {}
+    prev_skill = current_skill
+    for idx, (name, icon_path) in enumerate(skills_info):
+        btn = QToolButton()
+        btn.setCheckable(True)
+        btn.setToolTip(name)
+        if os.path.exists(icon_path):
+            btn.setIcon(QIcon(icon_path))
+        # Small label under icon
+        btn.setText(name)
+        if hasattr(btn, "setToolButtonStyle"):
+            try:
+                btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        btn.setIconSize(QSize(48, 48))
+        btn.setAutoRaise(True)
+        btn.setStyleSheet(
+            """
+            QToolButton { border: 1px solid #cccccc; border-radius: 8px; padding: 6px; }
+            QToolButton:hover { border-color: #999999; }
+            QToolButton:checked { border: 2px solid #4CAF50; background-color: #e8f5e9; }
+            """
+        )
+        # Disable Smithing if no bars can be smelted; store reference for dynamic enable
+        if name == "Smithing" and not can_smelt_any_bar:
+            btn.setEnabled(False)
+            btn.setToolTip("Smithing is unavailable: you can't smelt any bars yet. Mine ores first.")
+            _MAIN_MENU_CTX["smith_btn"] = btn
+        elif name == "Smithing":
+            _MAIN_MENU_CTX["smith_btn"] = btn
+        # Disable Crafting if no craftable items; store reference for dynamic enable
+        if name == "Crafting":
+            # Basic check: either current selected craft is craftable or any item is craftable
+            player_level = player_data.get("crafting_level", 1)
+            inv = player_data.get("inventory", {})
+            can_any = False
+            try:
+                # Quick check over data set
+                for item_name, spec in CRAFTING_DATA.items():
+                    if can_craft_item_pure(player_level, inv, item_name, CRAFTING_DATA):
+                        can_any = True
+                        break
+            except Exception:
+                can_any = False
+            if not can_any:
+                btn.setEnabled(False)
+                btn.setToolTip("Crafting is unavailable: you don't have materials or level to craft any item.")
+                _MAIN_MENU_CTX["craft_btn"] = btn
+            else:
+                _MAIN_MENU_CTX["craft_btn"] = btn
+        btn_group.addButton(btn, idx)
+        sel_layout.addWidget(btn)
+        name_to_btn[name] = btn
+        # Connect per-button to avoid fragile id/index coupling
+        btn.clicked.connect(lambda _checked=False, n=name: _select_and_persist(n))
+
+    def _select_and_persist(name: str):
+        nonlocal prev_skill
+        if name == "Smithing" and not can_smelt_any_bar:
             warn.setText("You don't have enough ores to smelt any bars. Mine some ores first!")
-        else:
-            warn.setText("")
+            # revert selection
+            if prev_skill in name_to_btn:
+                name_to_btn[prev_skill].setChecked(True)
+            return
+        if name == "Crafting":
+            # Re-evaluate quickly
+            player_level = player_data.get("crafting_level", 1)
+            inv = player_data.get("inventory", {})
+            can_any = any(
+                can_craft_item_pure(player_level, inv, item_name, CRAFTING_DATA) for item_name in CRAFTING_DATA.keys()
+            )
+            if not can_any:
+                warn.setText("You can't craft anything yet. Gather materials or level up first!")
+                if prev_skill in name_to_btn:
+                    name_to_btn[prev_skill].setChecked(True)
+                return
+        warn.setText("")
+        prev_skill = name
+        on_save_skill(name)
 
-    _update_warn()
-    skill_combo.currentTextChanged.connect(lambda _: _update_warn())
-    save_btn = QPushButton("Save Skill")
-    save_btn.clicked.connect(lambda: on_save_skill(skill_combo.currentText()))
-    s_layout.addWidget(save_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+    # No group id handler; each button handles its own click
+
+    # Initialize selection with edge-case handling (fallback if Smithing is disabled)
+    initial_name = current_skill if current_skill in name_to_btn else "None"
+    if initial_name == "Smithing" and not can_smelt_any_bar:
+        # Prefer previous valid selection or None
+        initial_name = "None"
+        warn.setText("Smithing is currently unavailable until you can smelt a bar.")
+    if initial_name == "Crafting":
+        player_level = player_data.get("crafting_level", 1)
+        inv = player_data.get("inventory", {})
+        can_any = any(
+            can_craft_item_pure(player_level, inv, item_name, CRAFTING_DATA) for item_name in CRAFTING_DATA.keys()
+        )
+        if not can_any:
+            initial_name = "None"
+            warn.setText("Crafting is currently unavailable until you can craft at least one item.")
+    if initial_name in name_to_btn:
+        name_to_btn[initial_name].setChecked(True)
+        prev_skill = initial_name
+
+    # Store dialog + warn for later refresh use
+    _MAIN_MENU_CTX["dialog"] = dialog
+    _MAIN_MENU_CTX["warn_label"] = warn
+
+    # Clear context when dialog closes
+    try:
+        dialog.finished.connect(lambda _=None: (_MAIN_MENU_CTX.update({"dialog": None, "smith_btn": None, "warn_label": None})))
+    except Exception:
+        pass
+
+    s_layout.addWidget(selector)
+    s_layout.addWidget(warn)
     tabs.addTab(skills_tab, "Skills")
     tabs.setTabToolTip(tabs.indexOf(skills_tab), "Select your active skill for reviews")
+    skills_tab_index = tabs.indexOf(skills_tab)
+    # Recompute availability when switching to Skills tab
+    def _refresh_on_tab(idx: int):
+        try:
+            if idx == skills_tab_index:
+                can_smelt = can_smelt_any_bar_pure(player_data.get("inventory", {}), player_data.get("smithing_level", 1), BAR_DATA)
+                can_craft = any(
+                    can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item, CRAFTING_DATA)
+                    for item, _ in CRAFTING_DATA.items()
+                )
+                refresh_skill_availability(can_smelt, can_craft)
+        except Exception:
+            pass
+    tabs.currentChanged.connect(_refresh_on_tab)
 
     # Mining tab
     mining_tab = QWidget()
@@ -288,13 +446,11 @@ def show_main_menu(
         if ore == player_data.get("current_ore"):
             ore_list.setCurrentItem(item)
     m_layout.addWidget(ore_list)
-    m_apply = QPushButton("Apply")
-    def _apply_ore():
-        current = ore_list.currentItem()
-        if current:
-            on_set_ore(current.data(Qt.ItemDataRole.UserRole))
-    m_apply.clicked.connect(_apply_ore)
-    m_layout.addWidget(m_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    def _on_ore_selected(item: QListWidgetItem):
+        if item:
+            on_set_ore(item.data(Qt.ItemDataRole.UserRole))
+    ore_list.itemClicked.connect(_on_ore_selected)
+    ore_list.itemActivated.connect(_on_ore_selected)
     tabs.addTab(mining_tab, "Mining")
     # Tab icon and tooltip
     mining_icon = os.path.join(current_dir, "icon", "mining_icon.png")
@@ -330,9 +486,11 @@ def show_main_menu(
         if tree == player_data.get("current_tree"):
             tree_list.setCurrentItem(item)
     w_layout.addWidget(tree_list)
-    w_apply = QPushButton("Apply")
-    w_apply.clicked.connect(lambda: tree_list.currentItem() and on_set_tree(tree_list.currentItem().data(Qt.ItemDataRole.UserRole)))
-    w_layout.addWidget(w_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    def _on_tree_selected(item: QListWidgetItem):
+        if item:
+            on_set_tree(item.data(Qt.ItemDataRole.UserRole))
+    tree_list.itemClicked.connect(_on_tree_selected)
+    tree_list.itemActivated.connect(_on_tree_selected)
     tabs.addTab(wood_tab, "Woodcutting")
     wood_icon = os.path.join(current_dir, "icon", "woodcutting_icon.png")
     if os.path.exists(wood_icon):
@@ -375,9 +533,11 @@ def show_main_menu(
         if bar == player_data.get("current_bar"):
             bar_list.setCurrentItem(item)
     sm_layout.addWidget(bar_list)
-    sm_apply = QPushButton("Apply")
-    sm_apply.clicked.connect(lambda: bar_list.currentItem() and on_set_bar(bar_list.currentItem().data(Qt.ItemDataRole.UserRole)))
-    sm_layout.addWidget(sm_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    def _on_bar_selected(item: QListWidgetItem):
+        if item:
+            on_set_bar(item.data(Qt.ItemDataRole.UserRole))
+    bar_list.itemClicked.connect(_on_bar_selected)
+    bar_list.itemActivated.connect(_on_bar_selected)
     tabs.addTab(smith_tab, "Smithing")
     smith_icon = os.path.join(current_dir, "icon", "smithing_icon.png")
     if os.path.exists(smith_icon):
@@ -431,9 +591,11 @@ def show_main_menu(
         if item_name == player_data.get("current_craft"):
             craft_list.setCurrentItem(item)
     c_layout.addWidget(craft_list)
-    c_apply = QPushButton("Apply")
-    c_apply.clicked.connect(lambda: craft_list.currentItem() and on_set_craft(craft_list.currentItem().data(Qt.ItemDataRole.UserRole)))
-    c_layout.addWidget(c_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    def _on_craft_selected(item: QListWidgetItem):
+        if item:
+            on_set_craft(item.data(Qt.ItemDataRole.UserRole))
+    craft_list.itemClicked.connect(_on_craft_selected)
+    craft_list.itemActivated.connect(_on_craft_selected)
     tabs.addTab(craft_tab, "Crafting")
     craft_icon = os.path.join(current_dir, "icon", "crafting_icon.png")
     if os.path.exists(craft_icon):
@@ -481,33 +643,6 @@ def show_main_menu(
         grid.addWidget(QLabel("Level Progress:"), 3, 0)
         grid.addWidget(prog, 3, 1)
         b_layout.addLayout(grid)
-
-        inv_title = QLabel(f"{skill_name} Inventory")
-        inv_title.setStyleSheet("font-weight: bold;")
-        b_layout.addWidget(inv_title)
-        inv_grid = QGridLayout()
-        row = 0
-        for item, amount in player_data.get("inventory", {}).items():
-            if (
-                (skill_name == "Mining" and (item in ORE_DATA or item in GEM_DATA))
-                or (skill_name == "Woodcutting" and item in TREE_DATA)
-                or (skill_name == "Smithing" and item in BAR_DATA)
-                or (skill_name == "Crafting" and item in CRAFTING_DATA)
-            ):
-                icon_lbl = QLabel()
-                pixmap = QPixmap(
-                    ORE_IMAGES.get(item)
-                    or TREE_IMAGES.get(item)
-                    or BAR_IMAGES.get(item)
-                    or GEM_IMAGES.get(item)
-                    or CRAFTED_ITEM_IMAGES.get(item)
-                )
-                icon_lbl.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio))
-                inv_grid.addWidget(icon_lbl, row, 0)
-                inv_grid.addWidget(QLabel(item), row, 1)
-                inv_grid.addWidget(QLabel(str(amount)), row, 2)
-                row += 1
-        b_layout.addLayout(inv_grid)
         return block
 
     # Details container (will switch based on selected skill)
@@ -538,6 +673,13 @@ def show_main_menu(
         btn.setToolTip(name)
         if os.path.exists(icon_path):
             btn.setIcon(QIcon(icon_path))
+        # Small label under icon
+        btn.setText(name)
+        if hasattr(btn, "setToolButtonStyle"):
+            try:
+                btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)  # type: ignore[attr-defined]
+            except Exception:
+                pass
         btn.setIconSize(QSize(48, 48))
         btn.setAutoRaise(True)
         # Visual feedback styles
@@ -551,6 +693,11 @@ def show_main_menu(
         button_group.addButton(btn, idx)
         sel_layout.addWidget(btn)
         buttons[name] = btn
+        # Connect per-button click to select and persist
+        btn.clicked.connect(lambda _checked=False, n=name: (
+            _select_skill(n),
+            (mw and getattr(mw, 'col', None) and mw.col.set_config("ankiscape_stats_selected_skill", n))
+        ))
 
     st_layout.addWidget(selector)
 
@@ -565,27 +712,61 @@ def show_main_menu(
         # Add new details
         details_layout.addWidget(_mk_skill_details(skill_name))
 
-    def _on_button_clicked(id_: int):
-        skill_name = skills_info[id_][0]
-        _select_skill(skill_name)
-
-    button_group.idClicked.connect(_on_button_clicked)
+    # No idClicked usage; handled per-button above
 
     # Initial selection
-    initial_skill = current_skill if current_skill in {n for n, _ in skills_info} else "Mining"
+    # Load persisted selection if available; fall back to current_skill then Mining
+    persisted = None
+    try:
+        if mw and getattr(mw, 'col', None):
+            persisted = mw.col.get_config("ankiscape_stats_selected_skill", None)
+    except Exception:
+        persisted = None
+    initial_skill = persisted if persisted in {n for n, _ in skills_info} else (current_skill if current_skill in {n for n, _ in skills_info} else "Mining")
     initial_index = next((i for i, (n, _) in enumerate(skills_info) if n == initial_skill), 0)
     button_group.button(initial_index).setChecked(True)
     _select_skill(initial_skill)
 
     st_layout.addWidget(details_container)
-    tabs.addTab(stats_tab, "Stats")
-    # No dedicated stats icon; fall back to achievement icon if present
+    # Defer adding Stats tab until after Bank to satisfy desired ordering (Bank then Stats)
     ach_icon_path = os.path.join(current_dir, "icon", "achievement_icon.png")
+
+    # Achievements tab
+    # Bank tab (all inventory items)
+    bank_tab = QWidget()
+    bk_layout = QVBoxLayout(bank_tab)
+    bk_layout.setContentsMargins(12, 12, 12, 12)
+    bk_layout.setSpacing(8)
+    bank_list = QListWidget()
+    bank_list.setIconSize(QSize(28, 28))
+    bank_list.setAlternatingRowColors(True)
+    # Only show items with quantity > 0
+    inv = player_data.get("inventory", {})
+    for item_name in sorted(inv.keys()):
+        amount = inv.get(item_name, 0)
+        if amount and amount > 0:
+            text = f"{item_name} x{amount}"
+            li = QListWidgetItem(text)
+            icon_path = (
+                ORE_IMAGES.get(item_name)
+                or TREE_IMAGES.get(item_name)
+                or BAR_IMAGES.get(item_name)
+                or GEM_IMAGES.get(item_name)
+                or CRAFTED_ITEM_IMAGES.get(item_name)
+            )
+            if icon_path and os.path.exists(icon_path):
+                li.setIcon(QIcon(icon_path))
+            bank_list.addItem(li)
+    bk_layout.addWidget(bank_list)
+    tabs.addTab(bank_tab, "Bank")
+    tabs.setTabToolTip(tabs.indexOf(bank_tab), "View all your items")
+
+    # Now add the Stats tab (after Bank) and set its icon/tooltip
+    tabs.addTab(stats_tab, "Stats")
     if os.path.exists(ach_icon_path):
         tabs.setTabIcon(tabs.indexOf(stats_tab), QIcon(ach_icon_path))
     tabs.setTabToolTip(tabs.indexOf(stats_tab), "View your skill stats")
 
-    # Achievements tab
     # Achievements tab (inline)
     ach_tab = QWidget()
     a_layout = QVBoxLayout(ach_tab)
@@ -1004,7 +1185,6 @@ def show_review_popup():
     if dialog.exec():
         if hide_checkbox.isChecked():
             mw.col.set_config("ankiscape_hide_review_popup", True)
-            mw.col.save()
 
 
 def show_stats(player_data: dict, current_skill: str):

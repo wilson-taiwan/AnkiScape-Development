@@ -124,8 +124,7 @@ def apply_crafting_pure(item, inventory, crafting_data):
     new_inv = dict(inventory)
     for material, amount in spec.get("requirements", {}).items():
         new_inv[material] = new_inv.get(material, 0) - amount
-    if item not in ("None",):
-        new_inv[item] = new_inv.get(item, 0) + 1
+    new_inv[item] = new_inv.get(item, 0) + 1
     exp = spec.get("exp", 0)
     return new_inv, exp, True
 

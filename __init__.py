@@ -42,6 +42,7 @@ from .ui import (
     show_error_message,
     show_tree_selection_dialog,
     show_ore_selection_dialog,
+    refresh_skill_availability,
 )
 from . import ui
 from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
@@ -94,6 +95,11 @@ def save_skill(skill, dialog):
     else:
         current_skill = skill
         ui.update_menu_visibility(current_skill)
+        # Persist immediately so the selection survives window close
+        try:
+            mw.col.set_config("ankiscape_current_skill", current_skill)
+        except Exception:
+            pass
         if dialog:
             dialog.accept()
 
@@ -105,7 +111,7 @@ def save_skill(skill, dialog):
 
 def show_craft_selection():
     selected = ui.show_craft_selection_dialog(
-        current_craft=player_data.get("current_craft", "None"),
+        current_craft=player_data.get("current_craft", ""),
         crafting_level=player_data.get("crafting_level", 1),
         inventory=player_data.get("inventory", {}),
         CRAFTING_DATA=CRAFTING_DATA,
@@ -138,6 +144,16 @@ def on_crafting_answer():
     level_up_check("Crafting", player_data)
     check_achievements(player_data)
     save_player_data()
+
+    # Refresh availability for Crafting/Smithing in the open menu (enables, never auto-selects)
+    try:
+        can_craft_any = any(
+            can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA)
+            for item_name in CRAFTING_DATA.keys()
+        )
+        refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
+    except Exception:
+        pass
 
     if hasattr(mw, 'exp_popup'):
         mw.exp_popup.show_exp(exp_gained)
@@ -230,6 +246,16 @@ def on_smithing_answer():
     check_achievements(player_data)
     save_player_data()
 
+    # Refresh availability for Crafting/Smithing in the open menu after smelting
+    try:
+        can_craft_any = any(
+            can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA)
+            for item_name in CRAFTING_DATA.keys()
+        )
+        refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
+    except Exception:
+        pass
+
     if hasattr(mw, 'exp_popup'):
         mw.exp_popup.show_exp(exp_gained)
     else:
@@ -299,6 +325,17 @@ def on_good_answer():
             level_up_check("Mining", player_data)
             check_achievements(player_data)
             save_player_data()
+
+            # If the main menu is open, auto-enable Smithing/Crafting when they become possible.
+            try:
+                # Crafting availability might change if gems/bars are produced by mining flows elsewhere.
+                can_craft_any = any(
+                    can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA)
+                    for item_name in CRAFTING_DATA.keys()
+                )
+                refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
+            except Exception:
+                pass
 
             if hasattr(mw, 'exp_popup'):
                 mw.exp_popup.show_exp(exp_gained)

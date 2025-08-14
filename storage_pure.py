@@ -15,7 +15,7 @@ def default_player_data(ORE_DATA: Dict[str, Any]) -> Dict[str, Any]:
         "woodcutting_exp": 0,
         "smithing_exp": 0,
         "crafting_exp": 0,
-        "current_craft": "None",
+    "current_craft": "",
         "current_ore": "Rune essence",
         "current_tree": "Tree",
         "current_bar": "Bronze bar",
@@ -48,7 +48,7 @@ def migrate_loaded_data(loaded: Dict[str, Any], ORE_DATA: Dict[str, Any]) -> Dic
     # Ensure crafting fields exist
     data.setdefault("crafting_level", 1)
     data.setdefault("crafting_exp", 0)
-    data.setdefault("current_craft", "None")
+    data.setdefault("current_craft", "")
 
     # Ensure ore/tree selection fields exist
     data.setdefault("current_ore", "Rune essence")
