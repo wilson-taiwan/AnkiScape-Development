@@ -767,75 +767,91 @@ def show_main_menu(
         tabs.setTabIcon(tabs.indexOf(stats_tab), QIcon(ach_icon_path))
     tabs.setTabToolTip(tabs.indexOf(stats_tab), "View your skill stats")
 
-    # Achievements tab (inline)
+    # Achievements tab (inline, themed)
     ach_tab = QWidget()
     a_layout = QVBoxLayout(ach_tab)
     a_layout.setContentsMargins(12, 12, 12, 12)
     a_layout.setSpacing(8)
     a_tabs = QTabWidget()
+    a_tabs.setDocumentMode(True)
+
+    def _make_achievement_card(title: str, desc: str, completed: bool) -> QWidget:
+        card = QWidget()
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(10, 8, 10, 8)
+        card_layout.setSpacing(10)
+        # Icon
+        icon_label = QLabel()
+        icon_path = os.path.join(current_dir, "icon", f"{title.lower().replace(' ', '_')}.png")
+        pixmap = QPixmap(icon_path) if os.path.exists(icon_path) else QPixmap(os.path.join(current_dir, "icon", "achievement_icon.png"))
+        icon_label.setPixmap(pixmap.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        card_layout.addWidget(icon_label)
+        # Info
+        info = QWidget()
+        il = QVBoxLayout(info)
+        il.setContentsMargins(0, 0, 0, 0)
+        il.setSpacing(2)
+        name = QLabel(title)
+        name.setStyleSheet("font-weight: 600;")
+        desc_label = QLabel(desc)
+        desc_label.setWordWrap(True)
+        il.addWidget(name)
+        il.addWidget(desc_label)
+        card_layout.addWidget(info, 1)
+        # Status
+        status = QLabel("✓" if completed else "")
+        status.setStyleSheet("color: #4CAF50; font-size: 16px; font-weight: 700;")
+        card_layout.addWidget(status, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        # Themed card style (palette-aware)
+        card.setStyleSheet(
+            "border: 1px solid palette(mid); border-radius: 6px; background-color: palette(base);"
+        )
+        return card
+
     difficulties = ["Easy", "Moderate", "Difficult", "Very Challenging"]
     for difficulty in difficulties:
         tab = QWidget()
-        tab_layout = QVBoxLayout()
-        scroll_area = QScrollArea()
-        scroll_widget = QWidget()
-        scroll_layout = QVBoxLayout()
+        tab_layout = QVBoxLayout(tab)
+        tab_layout.setContentsMargins(0, 0, 0, 0)
+        tab_layout.setSpacing(0)
+        # Count per difficulty
+        items = [(n, d) for n, d in ACHIEVEMENTS.items() if d.get("difficulty") == difficulty]
+        done = sum(1 for n, _ in items if n in player_data.get("completed_achievements", []))
+        header = QLabel(f"{difficulty} • {done}/{len(items)} completed")
+        header.setStyleSheet("font-weight: 600; margin: 0 0 6px 0;")
+        tab_layout.addWidget(header)
 
-        for achievement, data in ACHIEVEMENTS.items():
-            if data["difficulty"] == difficulty:
-                achievement_widget = QWidget()
-                achievement_layout = QHBoxLayout()
-
-                icon_label = QLabel()
-                icon_path = os.path.join(current_dir, "icon", f"{achievement.lower().replace(' ', '_')}.png")
-                if os.path.exists(icon_path):
-                    pixmap = QPixmap(icon_path)
-                else:
-                    pixmap = QPixmap(os.path.join(current_dir, "icon", "achievement_icon.png"))
-                icon_label.setPixmap(pixmap.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio))
-                achievement_layout.addWidget(icon_label)
-
-                info_widget = QWidget()
-                info_layout = QVBoxLayout()
-                name_label = QLabel(achievement)
-                name_label.setStyleSheet("font-weight: bold;")
-                desc_label = QLabel(data["description"])
-                desc_label.setWordWrap(True)
-                info_layout.addWidget(name_label)
-                info_layout.addWidget(desc_label)
-                info_widget.setLayout(info_layout)
-                achievement_layout.addWidget(info_widget, stretch=1)
-
-                completed = achievement in player_data["completed_achievements"]
-                status_label = QLabel("✓" if completed else "")
-                status_label.setStyleSheet("color: #4CAF50; font-size: 18px; font-weight: bold;")
-                achievement_layout.addWidget(status_label)
-
-                achievement_widget.setLayout(achievement_layout)
-                achievement_widget.setStyleSheet(
-                    f"background-color: {'#e8f5e9' if completed else 'white'}; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px; margin-bottom: 6px;"
-                )
-                scroll_layout.addWidget(achievement_widget)
-
-        scroll_widget.setLayout(scroll_layout)
-        scroll_area.setWidget(scroll_widget)
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("border: none;")
-        tab_layout.addWidget(scroll_area)
-        tab.setLayout(tab_layout)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none;")
+        content = QWidget()
+        cl = QVBoxLayout(content)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(8)
+        for name, data in items:
+            card = _make_achievement_card(name, data.get("description", ""), name in player_data.get("completed_achievements", []))
+            cl.addWidget(card)
+        cl.addStretch(1)
+        scroll.setWidget(content)
+        tab_layout.addWidget(scroll)
         a_tabs.addTab(tab, difficulty)
 
     a_layout.addWidget(a_tabs)
 
-    completed_count = len(player_data["completed_achievements"])
+    completed_count = len(player_data.get("completed_achievements", []))
     total_count = len(ACHIEVEMENTS)
     progress_percentage = (completed_count / max(1, total_count)) * 100
+    progress_row = QWidget()
+    prl = QHBoxLayout(progress_row)
+    prl.setContentsMargins(0, 0, 0, 0)
+    prl.setSpacing(8)
     progress_label = QLabel(f"Completed: {completed_count}/{total_count} ({progress_percentage:.1f}%)")
-    a_layout.addWidget(progress_label, alignment=Qt.AlignmentFlag.AlignCenter)
+    prl.addWidget(progress_label)
     progress_bar = QProgressBar()
     progress_bar.setValue(int(progress_percentage))
     progress_bar.setTextVisible(False)
-    a_layout.addWidget(progress_bar)
+    prl.addWidget(progress_bar, 1)
+    a_layout.addWidget(progress_row)
 
     tabs.addTab(ach_tab, "Achievements")
     if os.path.exists(ach_icon_path):
@@ -843,9 +859,25 @@ def show_main_menu(
     tabs.setTabToolTip(tabs.indexOf(ach_tab), "Review your achievements")
 
     layout.addWidget(tabs)
+
+    # Footer with a subtle review link
+    footer = QWidget()
+    f_layout = QHBoxLayout(footer)
+    f_layout.setContentsMargins(0, 8, 0, 0)
+    f_layout.setSpacing(8)
+    hint = QLabel("Enjoying AnkiScape?")
+    link = QLabel('<a href="https://ankiweb.net/shared/review/1808450369">Leave a review</a>')
+    link.setOpenExternalLinks(True)
+    link.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+    hint.setStyleSheet("color: #666;")
+    link.setStyleSheet("color: #4CAF50;")
+    f_layout.addWidget(hint)
+    f_layout.addWidget(link)
+    f_layout.addStretch(1)
     close = QPushButton("Close")
     close.clicked.connect(dialog.accept)
-    layout.addWidget(close, alignment=Qt.AlignmentFlag.AlignRight)
+    f_layout.addWidget(close)
+    layout.addWidget(footer)
     dialog.setLayout(layout)
     dialog.exec()
 
@@ -1158,33 +1190,8 @@ def show_skill_selection_dialog(current_skill: str, can_smelt_any_bar: bool) -> 
 
 
 def show_review_popup():
-    if mw.col.get_config("ankiscape_hide_review_popup", False):
-        return
-
-    dialog = QDialog(mw)
-    dialog.setWindowTitle("AnkiScape - Enjoying the add-on?")
-    layout = QVBoxLayout()
-
-    message = QLabel(
-        "If you're enjoying AnkiScape, please consider leaving a review. Your feedback helps others discover the add-on!")
-    layout.addWidget(message)
-
-    review_button = QPushButton("Leave a Review")
-    review_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://ankiweb.net/shared/review/1808450369")))
-    layout.addWidget(review_button)
-
-    hide_checkbox = QCheckBox("Don't show this message again")
-    layout.addWidget(hide_checkbox)
-
-    close_button = QPushButton("Close")
-    close_button.clicked.connect(dialog.accept)
-    layout.addWidget(close_button)
-
-    dialog.setLayout(layout)
-
-    if dialog.exec():
-        if hide_checkbox.isChecked():
-            mw.col.set_config("ankiscape_hide_review_popup", True)
+    # Deprecated: replaced by footer link in the main menu.
+    return
 
 
 def show_stats(player_data: dict, current_skill: str):

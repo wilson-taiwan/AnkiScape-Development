@@ -405,7 +405,6 @@ addHook("profileLoaded", load_player_data)
 addHook("profileLoaded", initialize_exp_popup)
 addHook("profileLoaded", initialize_skill)
 addHook("profileLoaded", initialize_menu)
-addHook("profileLoaded", show_review_popup)
 
 gui_hooks.reviewer_did_show_question.append(on_card_did_show)
 gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
