@@ -1,10 +1,48 @@
 # ui.py - UI components and dialogs for AnkiScape
 
-from aqt import mw
-from aqt.qt import *
-from aqt.utils import showInfo
 import os
 from typing import Optional
+
+try:
+    from aqt import mw  # type: ignore
+    from aqt.qt import *  # type: ignore
+    # Explicit imports to satisfy static analysis and avoid star-import ambiguity
+    from aqt.qt import (  # type: ignore
+        Qt,
+        QIcon,
+        QSize,
+        QTabWidget,
+        QWidget,
+        QVBoxLayout,
+        QComboBox,
+        QLabel,
+        QPushButton,
+        QListWidget,
+        QListWidgetItem,
+        QGraphicsOpacityEffect,
+        QPropertyAnimation,
+        QEasingCurve,
+        QPoint,
+        QMessageBox,
+        QDialog,
+        QPixmap,
+        QMenu,
+        QGridLayout,
+        QHBoxLayout,
+        QButtonGroup,
+        QRadioButton,
+        QScrollArea,
+        QProgressBar,
+        QCheckBox,
+        QDesktopServices,
+        QUrl,
+    )
+    HAS_QT = True
+except Exception:
+    # Running outside Anki/Qt environment (e.g., unit tests). Keep module importable.
+    mw = None  # type: ignore
+    HAS_QT = False
+
 from .constants import (
     EXP_TABLE,
     ORE_DATA,
@@ -22,42 +60,54 @@ from .constants import (
 )
 from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure
 
+
 # UI Classes
-class ExpPopup(QLabel):
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setStyleSheet("""
+if HAS_QT:
+    class ExpPopup(QLabel):
+        def __init__(self, parent):
+            super().__init__(parent)
+            self.setStyleSheet(
+                """
             background-color: rgba(70, 130, 180, 200);
             color: white;
             border-radius: 10px;
             padding: 5px;
             font-weight: bold;
-        """)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.hide()
+        """
+            )
+            self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.hide()
 
-    def show_exp(self, exp):
-        self.setText(f"+{exp} XP")
-        self.adjustSize()
-        self.show()
-        self.move(self.parent().width() - self.width() - 20, self.parent().height() - 100)
-        self.opacity_effect = QGraphicsOpacityEffect(self)
-        self.setGraphicsEffect(self.opacity_effect)
-        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
-        self.fade_animation.setDuration(2000)
-        self.fade_animation.setStartValue(1.0)
-        self.fade_animation.setEndValue(0.0)
-        self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.fade_animation.finished.connect(self.hide)
-        self.float_animation = QPropertyAnimation(self, b"pos")
-        self.float_animation.setDuration(2000)
-        start_pos = self.pos()
-        end_pos = start_pos - QPoint(0, 50)
-        self.float_animation.setStartValue(start_pos)
-        self.float_animation.setEndValue(end_pos)
-        self.float_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
-        self.fade_animation.start()
-        self.float_animation.start()
+        def show_exp(self, exp):
+            self.setText(f"+{exp} XP")
+            self.adjustSize()
+            self.show()
+            self.move(self.parent().width() - self.width() - 20, self.parent().height() - 100)
+            self.opacity_effect = QGraphicsOpacityEffect(self)
+            self.setGraphicsEffect(self.opacity_effect)
+            self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
+            self.fade_animation.setDuration(2000)
+            self.fade_animation.setStartValue(1.0)
+            self.fade_animation.setEndValue(0.0)
+            self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            self.fade_animation.finished.connect(self.hide)
+            self.float_animation = QPropertyAnimation(self, b"pos")
+            self.float_animation.setDuration(2000)
+            start_pos = self.pos()
+            end_pos = start_pos - QPoint(0, 50)
+            self.float_animation.setStartValue(start_pos)
+            self.float_animation.setEndValue(end_pos)
+            self.float_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            self.fade_animation.start()
+            self.float_animation.start()
+else:
+    # Minimal placeholder to keep references safe during tests
+    class ExpPopup:
+        def __init__(self, parent):
+            pass
+
+        def show_exp(self, exp):
+            pass
 
 # UI Functions
 # ...existing code...
@@ -173,15 +223,21 @@ def show_main_menu(
     """
     dialog = QDialog(mw)
     dialog.setWindowTitle("AnkiScape Menu")
-    dialog.setMinimumWidth(700)
-    dialog.setMinimumHeight(600)
+    dialog.setMinimumWidth(720)
+    dialog.setMinimumHeight(620)
 
     layout = QVBoxLayout()
+    layout.setContentsMargins(16, 16, 16, 16)
+    layout.setSpacing(12)
+
     tabs = QTabWidget()
+    tabs.setDocumentMode(True)
 
     # Skills tab
     skills_tab = QWidget()
     s_layout = QVBoxLayout(skills_tab)
+    s_layout.setContentsMargins(12, 12, 12, 12)
+    s_layout.setSpacing(8)
     skill_combo = QComboBox()
     skills = ["None", "Mining", "Woodcutting", "Smithing", "Crafting"]
     skill_combo.addItems(skills)
@@ -204,17 +260,32 @@ def show_main_menu(
     save_btn.clicked.connect(lambda: on_save_skill(skill_combo.currentText()))
     s_layout.addWidget(save_btn, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(skills_tab, "Skills")
+    tabs.setTabToolTip(tabs.indexOf(skills_tab), "Select your active skill for reviews")
 
     # Mining tab
     mining_tab = QWidget()
     m_layout = QVBoxLayout(mining_tab)
+    m_layout.setContentsMargins(12, 12, 12, 12)
+    m_layout.setSpacing(8)
     m_layout.addWidget(QLabel("Select Ore to Mine"))
     ore_list = QListWidget()
+    ore_list.setIconSize(QSize(28, 28))
+    ore_list.setAlternatingRowColors(True)
     for ore, data in ORE_DATA.items():
         item = QListWidgetItem(f"{ore} (Lvl {data['level']})")
         item.setData(Qt.ItemDataRole.UserRole, ore)
+        # icon
+        icon_path = ORE_IMAGES.get(ore)
+        if icon_path and os.path.exists(icon_path):
+            item.setIcon(QIcon(icon_path))
+        # gating + tooltip
+        lvl_req = data.get('level', 1)
+        lvl_have = player_data.get("mining_level", 1)
         if not can_mine_ore_pure(player_data.get("mining_level", 1), ore, ORE_DATA):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            item.setToolTip(f"Requires Mining level {lvl_req}. You have {lvl_have}.")
+        else:
+            item.setToolTip(f"Mining level {lvl_req} required. You have {lvl_have}.")
         ore_list.addItem(item)
         if ore == player_data.get("current_ore"):
             ore_list.setCurrentItem(item)
@@ -227,17 +298,36 @@ def show_main_menu(
     m_apply.clicked.connect(_apply_ore)
     m_layout.addWidget(m_apply, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(mining_tab, "Mining")
+    # Tab icon and tooltip
+    mining_icon = os.path.join(current_dir, "icon", "mining_icon.png")
+    if os.path.exists(mining_icon):
+        tabs.setTabIcon(tabs.indexOf(mining_tab), QIcon(mining_icon))
+    tabs.setTabToolTip(tabs.indexOf(mining_tab), "Choose which ore to mine")
 
     # Woodcutting tab
     wood_tab = QWidget()
     w_layout = QVBoxLayout(wood_tab)
+    w_layout.setContentsMargins(12, 12, 12, 12)
+    w_layout.setSpacing(8)
     w_layout.addWidget(QLabel("Select Tree to Cut"))
     tree_list = QListWidget()
+    tree_list.setIconSize(QSize(28, 28))
+    tree_list.setAlternatingRowColors(True)
     for tree, data in TREE_DATA.items():
         item = QListWidgetItem(f"{tree} (Lvl {data['level']})")
         item.setData(Qt.ItemDataRole.UserRole, tree)
+        # icon
+        t_icon = TREE_IMAGES.get(tree)
+        if t_icon and os.path.exists(t_icon):
+            item.setIcon(QIcon(t_icon))
+        # gating + tooltip
+        lvl_req = data.get('level', 1)
+        lvl_have = player_data.get("woodcutting_level", 1)
         if not can_cut_tree_pure(player_data.get("woodcutting_level", 1), tree, TREE_DATA):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            item.setToolTip(f"Requires Woodcutting level {lvl_req}. You have {lvl_have}.")
+        else:
+            item.setToolTip(f"Woodcutting level {lvl_req} required. You have {lvl_have}.")
         tree_list.addItem(item)
         if tree == player_data.get("current_tree"):
             tree_list.setCurrentItem(item)
@@ -246,17 +336,43 @@ def show_main_menu(
     w_apply.clicked.connect(lambda: tree_list.currentItem() and on_set_tree(tree_list.currentItem().data(Qt.ItemDataRole.UserRole)))
     w_layout.addWidget(w_apply, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(wood_tab, "Woodcutting")
+    wood_icon = os.path.join(current_dir, "icon", "woodcutting_icon.png")
+    if os.path.exists(wood_icon):
+        tabs.setTabIcon(tabs.indexOf(wood_tab), QIcon(wood_icon))
+    tabs.setTabToolTip(tabs.indexOf(wood_tab), "Choose which tree to cut")
 
     # Smithing tab
     smith_tab = QWidget()
     sm_layout = QVBoxLayout(smith_tab)
+    sm_layout.setContentsMargins(12, 12, 12, 12)
+    sm_layout.setSpacing(8)
     sm_layout.addWidget(QLabel("Select Bar to Smelt"))
     bar_list = QListWidget()
+    bar_list.setIconSize(QSize(28, 28))
+    bar_list.setAlternatingRowColors(True)
     for bar, data in BAR_DATA.items():
         item = QListWidgetItem(f"{bar} (Lvl {data['level']})")
         item.setData(Qt.ItemDataRole.UserRole, bar)
+        # icon
+        b_icon = BAR_IMAGES.get(bar)
+        if b_icon and os.path.exists(b_icon):
+            item.setIcon(QIcon(b_icon))
+        # tooltip for materials and level
+        lvl_req = data.get('level', 1)
+        lvl_have = player_data.get("smithing_level", 1)
+        reqs = data.get('ore_required', {})
+        inv = player_data.get('inventory', {})
+        mat_lines = []
+        for ore_name, amt in reqs.items():
+            have = inv.get(ore_name, 0)
+            mat_lines.append(f"{ore_name} x{amt} (you have {have})")
+        mat_text = "\n".join(mat_lines) if mat_lines else "No materials required"
+        tooltip = f"Requires Smithing level {lvl_req}. You have {lvl_have}.\nMaterials:\n{mat_text}"
         if data.get("level", 1) > player_data.get("smithing_level", 1):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            item.setToolTip(tooltip)
+        else:
+            item.setToolTip(tooltip)
         bar_list.addItem(item)
         if bar == player_data.get("current_bar"):
             bar_list.setCurrentItem(item)
@@ -265,17 +381,54 @@ def show_main_menu(
     sm_apply.clicked.connect(lambda: bar_list.currentItem() and on_set_bar(bar_list.currentItem().data(Qt.ItemDataRole.UserRole)))
     sm_layout.addWidget(sm_apply, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(smith_tab, "Smithing")
+    smith_icon = os.path.join(current_dir, "icon", "smithing_icon.png")
+    if os.path.exists(smith_icon):
+        tabs.setTabIcon(tabs.indexOf(smith_tab), QIcon(smith_icon))
+    tabs.setTabToolTip(tabs.indexOf(smith_tab), "Choose which bar to smelt")
 
     # Crafting tab
     craft_tab = QWidget()
     c_layout = QVBoxLayout(craft_tab)
+    c_layout.setContentsMargins(12, 12, 12, 12)
+    c_layout.setSpacing(8)
     c_layout.addWidget(QLabel("Select Item to Craft"))
     craft_list = QListWidget()
+    craft_list.setIconSize(QSize(28, 28))
+    craft_list.setAlternatingRowColors(True)
     for item_name, spec in CRAFTING_DATA.items():
         item = QListWidgetItem(f"{item_name} (Lvl {spec['level']})")
         item.setData(Qt.ItemDataRole.UserRole, item_name)
+        # icon
+        c_icon = CRAFTED_ITEM_IMAGES.get(item_name)
+        if c_icon and os.path.exists(c_icon):
+            item.setIcon(QIcon(c_icon))
+        # tooltip with materials and level
+        lvl_req = spec.get('level', 1)
+        lvl_have = player_data.get("crafting_level", 1)
+        inv = player_data.get('inventory', {})
+        reqs = spec.get('requirements', {})
+        mat_lines = []
+        materials_ok = True
+        for mat, amt in reqs.items():
+            have = inv.get(mat, 0)
+            if have < amt:
+                materials_ok = False
+            mat_lines.append(f"{mat} x{amt} (you have {have})")
+        mat_text = "\n".join(mat_lines) if mat_lines else "No materials required"
+        tooltip = f"Requires Crafting level {lvl_req}. You have {lvl_have}.\nMaterials:\n{mat_text}"
         if not can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA):
             item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+            # Clarify reason if possible
+            reason = []
+            if lvl_have < lvl_req:
+                reason.append(f"level {lvl_req}")
+            if not materials_ok:
+                reason.append("materials")
+            if reason:
+                tooltip += "\nLocked due to: " + ", ".join(reason)
+            item.setToolTip(tooltip)
+        else:
+            item.setToolTip(tooltip)
         craft_list.addItem(item)
         if item_name == player_data.get("current_craft"):
             craft_list.setCurrentItem(item)
@@ -284,24 +437,40 @@ def show_main_menu(
     c_apply.clicked.connect(lambda: craft_list.currentItem() and on_set_craft(craft_list.currentItem().data(Qt.ItemDataRole.UserRole)))
     c_layout.addWidget(c_apply, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(craft_tab, "Crafting")
+    craft_icon = os.path.join(current_dir, "icon", "crafting_icon.png")
+    if os.path.exists(craft_icon):
+        tabs.setTabIcon(tabs.indexOf(craft_tab), QIcon(craft_icon))
+    tabs.setTabToolTip(tabs.indexOf(craft_tab), "Choose which item to craft")
 
     # Stats tab
     stats_tab = QWidget()
     st_layout = QVBoxLayout(stats_tab)
+    st_layout.setContentsMargins(12, 12, 12, 12)
+    st_layout.setSpacing(8)
     st_layout.addWidget(QLabel("Open detailed stats in a dialog"))
     st_btn = QPushButton("Open Stats")
     st_btn.clicked.connect(on_open_stats)
     st_layout.addWidget(st_btn, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(stats_tab, "Stats")
+    # No dedicated stats icon; fall back to achievement icon if present
+    ach_icon_path = os.path.join(current_dir, "icon", "achievement_icon.png")
+    if os.path.exists(ach_icon_path):
+        tabs.setTabIcon(tabs.indexOf(stats_tab), QIcon(ach_icon_path))
+    tabs.setTabToolTip(tabs.indexOf(stats_tab), "View your skill stats")
 
     # Achievements tab
     ach_tab = QWidget()
     a_layout = QVBoxLayout(ach_tab)
+    a_layout.setContentsMargins(12, 12, 12, 12)
+    a_layout.setSpacing(8)
     a_layout.addWidget(QLabel("Open achievements in a dialog"))
     a_btn = QPushButton("Open Achievements")
     a_btn.clicked.connect(on_open_achievements)
     a_layout.addWidget(a_btn, alignment=Qt.AlignmentFlag.AlignLeft)
     tabs.addTab(ach_tab, "Achievements")
+    if os.path.exists(ach_icon_path):
+        tabs.setTabIcon(tabs.indexOf(ach_tab), QIcon(ach_icon_path))
+    tabs.setTabToolTip(tabs.indexOf(ach_tab), "Review your achievements")
 
     layout.addWidget(tabs)
     close = QPushButton("Close")
