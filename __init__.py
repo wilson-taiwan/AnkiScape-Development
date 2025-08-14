@@ -190,9 +190,7 @@ def _on_main_menu():
         on_set_ore=lambda ore: _set_value("current_ore", ore),
         on_set_tree=lambda tree: _set_value("current_tree", tree),
         on_set_bar=lambda bar: _set_value("current_bar", bar),
-        on_set_craft=lambda item: _set_value("current_craft", item),
-        on_open_stats=lambda: ui.show_stats(player_data, current_skill),
-        on_open_achievements=lambda: ui.show_achievements(player_data),
+    on_set_craft=lambda item: _set_value("current_craft", item),
     )
 
 

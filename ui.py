@@ -214,8 +214,6 @@ def show_main_menu(
     on_set_tree,
     on_set_bar,
     on_set_craft,
-    on_open_stats,
-    on_open_achievements,
 ):
     """Show a consolidated window with tabs for Skills, Mining, Woodcutting, Smithing, Crafting,
     and quick access buttons for Stats and Achievements.
@@ -442,15 +440,144 @@ def show_main_menu(
         tabs.setTabIcon(tabs.indexOf(craft_tab), QIcon(craft_icon))
     tabs.setTabToolTip(tabs.indexOf(craft_tab), "Choose which item to craft")
 
-    # Stats tab
+    # Stats tab (inline, single-skill view with icon selectors)
     stats_tab = QWidget()
     st_layout = QVBoxLayout(stats_tab)
     st_layout.setContentsMargins(12, 12, 12, 12)
     st_layout.setSpacing(8)
-    st_layout.addWidget(QLabel("Open detailed stats in a dialog"))
-    st_btn = QPushButton("Open Stats")
-    st_btn.clicked.connect(on_open_stats)
-    st_layout.addWidget(st_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+
+    # Skill selectors with icons
+    selector = QWidget()
+    sel_layout = QHBoxLayout(selector)
+    sel_layout.setSpacing(12)
+    sel_layout.setContentsMargins(0, 0, 0, 0)
+
+    # Helper to create a details panel for a specific skill
+    def _mk_skill_details(skill_name: str) -> QWidget:
+        block = QWidget()
+        b_layout = QVBoxLayout(block)
+        b_layout.setSpacing(8)
+        title = QLabel(f"{skill_name} Stats")
+        title.setStyleSheet("font-size: 14px; font-weight: bold;")
+        b_layout.addWidget(title)
+        grid = QGridLayout()
+        grid.setColumnStretch(1, 1)
+        level = player_data.get(f"{skill_name.lower()}_level", 1)
+        exp = round(player_data.get(f"{skill_name.lower()}_exp", 0), 1)
+        grid.addWidget(QLabel(f"{skill_name} Level:"), 0, 0)
+        grid.addWidget(QLabel(str(level)), 0, 1)
+        grid.addWidget(QLabel("Total Experience:"), 1, 0)
+        grid.addWidget(QLabel(f"{exp:,}"), 1, 1)
+        if level < 99:
+            exp_to_next = round(max(0, EXP_TABLE[level] - exp), 1)
+            grid.addWidget(QLabel("Experience to Next Level:"), 2, 0)
+            grid.addWidget(QLabel(f"{exp_to_next:,}"), 2, 1)
+        prog = QProgressBar()
+        try:
+            progress_percentage = (exp - EXP_TABLE[level - 1]) / (EXP_TABLE[level] - EXP_TABLE[level - 1]) * 100
+            prog.setValue(int(max(0, min(100, progress_percentage))))
+        except Exception:
+            prog.setValue(0)
+        grid.addWidget(QLabel("Level Progress:"), 3, 0)
+        grid.addWidget(prog, 3, 1)
+        b_layout.addLayout(grid)
+
+        inv_title = QLabel(f"{skill_name} Inventory")
+        inv_title.setStyleSheet("font-weight: bold;")
+        b_layout.addWidget(inv_title)
+        inv_grid = QGridLayout()
+        row = 0
+        for item, amount in player_data.get("inventory", {}).items():
+            if (
+                (skill_name == "Mining" and (item in ORE_DATA or item in GEM_DATA))
+                or (skill_name == "Woodcutting" and item in TREE_DATA)
+                or (skill_name == "Smithing" and item in BAR_DATA)
+                or (skill_name == "Crafting" and item in CRAFTING_DATA)
+            ):
+                icon_lbl = QLabel()
+                pixmap = QPixmap(
+                    ORE_IMAGES.get(item)
+                    or TREE_IMAGES.get(item)
+                    or BAR_IMAGES.get(item)
+                    or GEM_IMAGES.get(item)
+                    or CRAFTED_ITEM_IMAGES.get(item)
+                )
+                icon_lbl.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio))
+                inv_grid.addWidget(icon_lbl, row, 0)
+                inv_grid.addWidget(QLabel(item), row, 1)
+                inv_grid.addWidget(QLabel(str(amount)), row, 2)
+                row += 1
+        b_layout.addLayout(inv_grid)
+        return block
+
+    # Details container (will switch based on selected skill)
+    details_container = QWidget()
+    details_layout = QVBoxLayout(details_container)
+    details_layout.setContentsMargins(0, 0, 0, 0)
+
+    # Create skill icon buttons
+    skills_info = [
+        ("Mining", os.path.join(current_dir, "icon", "mining_icon.png")),
+        ("Woodcutting", os.path.join(current_dir, "icon", "woodcutting_icon.png")),
+        ("Smithing", os.path.join(current_dir, "icon", "smithing_icon.png")),
+        ("Crafting", os.path.join(current_dir, "icon", "crafting_icon.png")),
+    ]
+
+    # Import here to keep headless safety for static analyzers
+    try:
+        from aqt.qt import QToolButton  # type: ignore
+    except Exception:
+        QToolButton = QPushButton  # fallback for typing
+
+    button_group = QButtonGroup()
+    button_group.setExclusive(True)
+    buttons = {}
+    for idx, (name, icon_path) in enumerate(skills_info):
+        btn = QToolButton()
+        btn.setCheckable(True)
+        btn.setToolTip(name)
+        if os.path.exists(icon_path):
+            btn.setIcon(QIcon(icon_path))
+        btn.setIconSize(QSize(48, 48))
+        btn.setAutoRaise(True)
+        # Visual feedback styles
+        btn.setStyleSheet(
+            """
+            QToolButton { border: 1px solid #cccccc; border-radius: 8px; padding: 6px; }
+            QToolButton:hover { border-color: #999999; }
+            QToolButton:checked { border: 2px solid #4CAF50; background-color: #e8f5e9; }
+            """
+        )
+        button_group.addButton(btn, idx)
+        sel_layout.addWidget(btn)
+        buttons[name] = btn
+
+    st_layout.addWidget(selector)
+
+    # Update details when a skill is selected
+    def _select_skill(skill_name: str):
+        # Clear previous content
+        child = details_layout.takeAt(0)
+        while child:
+            if child.widget():
+                child.widget().deleteLater()
+            child = details_layout.takeAt(0)
+        # Add new details
+        details_layout.addWidget(_mk_skill_details(skill_name))
+
+    def _on_button_clicked(id_: int):
+        skill_name = skills_info[id_][0]
+        _select_skill(skill_name)
+
+    button_group.idClicked.connect(_on_button_clicked)
+
+    # Initial selection
+    initial_skill = current_skill if current_skill in {n for n, _ in skills_info} else "Mining"
+    initial_index = next((i for i, (n, _) in enumerate(skills_info) if n == initial_skill), 0)
+    button_group.button(initial_index).setChecked(True)
+    _select_skill(initial_skill)
+
+    st_layout.addWidget(details_container)
     tabs.addTab(stats_tab, "Stats")
     # No dedicated stats icon; fall back to achievement icon if present
     ach_icon_path = os.path.join(current_dir, "icon", "achievement_icon.png")
@@ -459,14 +586,76 @@ def show_main_menu(
     tabs.setTabToolTip(tabs.indexOf(stats_tab), "View your skill stats")
 
     # Achievements tab
+    # Achievements tab (inline)
     ach_tab = QWidget()
     a_layout = QVBoxLayout(ach_tab)
     a_layout.setContentsMargins(12, 12, 12, 12)
     a_layout.setSpacing(8)
-    a_layout.addWidget(QLabel("Open achievements in a dialog"))
-    a_btn = QPushButton("Open Achievements")
-    a_btn.clicked.connect(on_open_achievements)
-    a_layout.addWidget(a_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+    a_tabs = QTabWidget()
+    difficulties = ["Easy", "Moderate", "Difficult", "Very Challenging"]
+    for difficulty in difficulties:
+        tab = QWidget()
+        tab_layout = QVBoxLayout()
+        scroll_area = QScrollArea()
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout()
+
+        for achievement, data in ACHIEVEMENTS.items():
+            if data["difficulty"] == difficulty:
+                achievement_widget = QWidget()
+                achievement_layout = QHBoxLayout()
+
+                icon_label = QLabel()
+                icon_path = os.path.join(current_dir, "icon", f"{achievement.lower().replace(' ', '_')}.png")
+                if os.path.exists(icon_path):
+                    pixmap = QPixmap(icon_path)
+                else:
+                    pixmap = QPixmap(os.path.join(current_dir, "icon", "achievement_icon.png"))
+                icon_label.setPixmap(pixmap.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio))
+                achievement_layout.addWidget(icon_label)
+
+                info_widget = QWidget()
+                info_layout = QVBoxLayout()
+                name_label = QLabel(achievement)
+                name_label.setStyleSheet("font-weight: bold;")
+                desc_label = QLabel(data["description"])
+                desc_label.setWordWrap(True)
+                info_layout.addWidget(name_label)
+                info_layout.addWidget(desc_label)
+                info_widget.setLayout(info_layout)
+                achievement_layout.addWidget(info_widget, stretch=1)
+
+                completed = achievement in player_data["completed_achievements"]
+                status_label = QLabel("✓" if completed else "")
+                status_label.setStyleSheet("color: #4CAF50; font-size: 18px; font-weight: bold;")
+                achievement_layout.addWidget(status_label)
+
+                achievement_widget.setLayout(achievement_layout)
+                achievement_widget.setStyleSheet(
+                    f"background-color: {'#e8f5e9' if completed else 'white'}; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px; margin-bottom: 6px;"
+                )
+                scroll_layout.addWidget(achievement_widget)
+
+        scroll_widget.setLayout(scroll_layout)
+        scroll_area.setWidget(scroll_widget)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setStyleSheet("border: none;")
+        tab_layout.addWidget(scroll_area)
+        tab.setLayout(tab_layout)
+        a_tabs.addTab(tab, difficulty)
+
+    a_layout.addWidget(a_tabs)
+
+    completed_count = len(player_data["completed_achievements"])
+    total_count = len(ACHIEVEMENTS)
+    progress_percentage = (completed_count / max(1, total_count)) * 100
+    progress_label = QLabel(f"Completed: {completed_count}/{total_count} ({progress_percentage:.1f}%)")
+    a_layout.addWidget(progress_label, alignment=Qt.AlignmentFlag.AlignCenter)
+    progress_bar = QProgressBar()
+    progress_bar.setValue(int(progress_percentage))
+    progress_bar.setTextVisible(False)
+    a_layout.addWidget(progress_bar)
+
     tabs.addTab(ach_tab, "Achievements")
     if os.path.exists(ach_icon_path):
         tabs.setTabIcon(tabs.indexOf(ach_tab), QIcon(ach_icon_path))
