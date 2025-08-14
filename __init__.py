@@ -11,6 +11,15 @@ import random
 import os
 import datetime
 import random
+from .logic_pure import (
+    calculate_probability_with_level,
+    pick_gem,
+    can_smelt_any_bar_pure,
+    create_soft_clay_pure,
+    has_crafting_materials_pure,
+    apply_crafting_pure,
+    apply_smelt_pure,
+)
 
 global card_turned, exp_awarded, answer_shown
 
@@ -422,64 +431,34 @@ def show_craft_selection():
             save_player_data()
 
 def has_crafting_materials(item):
-    requirements = CRAFTING_DATA[item]["requirements"]
-    for material, amount in requirements.items():
-        if material == "Soft clay":
-            if player_data["inventory"].get("Soft clay", 0) < amount:
-                return False
-        elif player_data["inventory"].get(material, 0) < amount:
-            return False
-    return True
+    return has_crafting_materials_pure(item, player_data["inventory"], CRAFTING_DATA)
 
 def on_crafting_answer():
     item = player_data["current_craft"]
-    item_data = CRAFTING_DATA[item]
 
-    # Check if player has required materials
+    # Check level and material requirements first
     if not has_crafting_materials(item):
         show_error_message("Insufficient materials", f"You don't have enough materials to craft {item}.")
         return
 
-    # Special handling for Soft clay
-    if item == "Soft clay":
-        if create_soft_clay():
-            exp_gained = item_data["exp"]
-            player_data["crafting_exp"] += exp_gained
-            level_up_check("Crafting")
-            check_achievements()
-            save_player_data()
-            if hasattr(mw, 'exp_popup'):
-                mw.exp_popup.show_exp(exp_gained)
-            else:
-                mw.exp_popup = ExpPopup(mw)
-                mw.exp_popup.show_exp(exp_gained)
-        else:
-            show_error_message("Insufficient materials", "You don't have enough Clay to create Soft clay.")
+    # Apply crafting via pure function (handles Soft clay and crafted items)
+    new_inv, exp_gained, ok = apply_crafting_pure(item, player_data["inventory"], CRAFTING_DATA)
+    if not ok:
+        show_error_message("Insufficient materials", f"You don't have enough materials to craft {item}.")
         return
 
-    # Deduct materials from inventory
-    for material, amount in item_data["requirements"].items():
-        if not safe_deduct_from_inventory(material, amount):
-            show_error_message("Insufficient materials", f"You don't have enough {material} to craft {item}.")
-            return
-
-    # Add crafted item to inventory
-    player_data["inventory"][item] = player_data["inventory"].get(item, 0) + 1
-
-    # Award experience
-    exp_gained = item_data["exp"]
+    # Update player data and UI
+    player_data["inventory"] = new_inv
     player_data["crafting_exp"] += exp_gained
     level_up_check("Crafting")
+    check_achievements()
+    save_player_data()
 
-    # Show experience popup
     if hasattr(mw, 'exp_popup'):
         mw.exp_popup.show_exp(exp_gained)
     else:
         mw.exp_popup = ExpPopup(mw)
         mw.exp_popup.show_exp(exp_gained)
-
-    check_achievements()
-    save_player_data()
 
 def show_bar_selection():
     dialog = QDialog(mw)
@@ -1022,34 +1001,29 @@ def create_menu():
 
 def on_smithing_answer():
     bar = player_data["current_bar"]
-    bar_data = BAR_DATA[bar]
+    bar_spec = BAR_DATA[bar]
     player_level = player_data["smithing_level"]
 
-    if player_level < bar_data["level"]:
-        show_error_message("Insufficient level", f"You need level {bar_data['level']} Smithing to smelt {bar}.")
+    if player_level < bar_spec["level"]:
+        show_error_message("Insufficient level", f"You need level {bar_spec['level']} Smithing to smelt {bar}.")
         return
 
-    # Check if player has required ores
-    for ore, amount in bar_data["ore_required"].items():
-        if player_data["inventory"].get(ore, 0) < amount:
-            show_error_message("Insufficient ore", f"You need {amount} {ore} to smelt {bar}.")
-            return
+    # Use pure smelt application
+    new_inv, exp_gained, ok = apply_smelt_pure(bar, player_data["inventory"], BAR_DATA)
+    if not ok:
+        # Find first missing ore to provide a helpful message
+        for ore, amount in bar_spec["ore_required"].items():
+            if player_data["inventory"].get(ore, 0) < amount:
+                show_error_message("Insufficient ore", f"You need {amount} {ore} to smelt {bar}.")
+                break
+        return
 
-    # Deduct ores from inventory
-    for ore, amount in bar_data["ore_required"].items():
-        player_data["inventory"][ore] -= amount
-
-    # Add bar to inventory
-    player_data["inventory"][bar] = player_data["inventory"].get(bar, 0) + 1
-
-    # Award experience
-    exp_gained = bar_data["exp"]
+    player_data["inventory"] = new_inv
     player_data["smithing_exp"] += exp_gained
     level_up_check("Smithing")
     check_achievements()
     save_player_data()
 
-    # Show experience popup
     if hasattr(mw, 'exp_popup'):
         mw.exp_popup.show_exp(exp_gained)
     else:
@@ -1088,13 +1062,23 @@ def on_woodcutting_answer():
 
 
 def calculate_woodcutting_probability(player_level, tree_probability):
-    level_bonus = player_level * LEVEL_BONUS_FACTOR
-    return min(BASE_WOODCUTTING_PROBABILITY + level_bonus, 0.95) * tree_probability
+    return calculate_probability_with_level(
+        player_level,
+        BASE_WOODCUTTING_PROBABILITY,
+        LEVEL_BONUS_FACTOR,
+        tree_probability,
+        cap=0.95,
+    )
 
 
 def calculate_mining_probability(player_level, ore_probability):
-    level_bonus = player_level * LEVEL_BONUS_FACTOR
-    return min(BASE_MINING_PROBABILITY + level_bonus, 0.95) * ore_probability
+    return calculate_probability_with_level(
+        player_level,
+        BASE_MINING_PROBABILITY,
+        LEVEL_BONUS_FACTOR,
+        ore_probability,
+        cap=0.95,
+    )
 
 
 def on_good_answer():
@@ -1151,13 +1135,7 @@ def on_good_answer():
 
 
 def roll_gem():
-    roll = random.random()
-    cumulative_prob = 0
-    for gem, data in GEM_DATA.items():
-        cumulative_prob += data["probability"]
-        if roll < cumulative_prob:
-            return gem
-    return None
+    return pick_gem(GEM_DATA, random.random())
 
 
 def on_answer_card(self, ease, _old):
@@ -1193,18 +1171,13 @@ def show_error_message(title, message):
 
 
 def can_smelt_any_bar():
-    for bar, data in BAR_DATA.items():
-        if player_data["smithing_level"] >= data["level"]:
-            if all(player_data["inventory"].get(ore, 0) >= amount for ore, amount in data["ore_required"].items()):
-                return True
-    return False
+    return can_smelt_any_bar_pure(player_data["inventory"], player_data["smithing_level"], BAR_DATA)
 
 def create_soft_clay():
-    if player_data["inventory"].get("Clay", 0) > 0:
-        player_data["inventory"]["Clay"] -= 1
-        player_data["inventory"]["Soft clay"] = player_data["inventory"].get("Soft clay", 0) + 1
-        return True
-    return False
+    new_inv, ok = create_soft_clay_pure(player_data["inventory"]) 
+    if ok:
+        player_data["inventory"] = new_inv
+    return ok
 
 def safe_deduct_from_inventory(item, amount):
     current_amount = player_data["inventory"].get(item, 0)

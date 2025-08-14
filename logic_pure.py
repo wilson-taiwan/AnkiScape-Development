@@ -47,3 +47,73 @@ def pick_gem(gem_data, r):
         if r < cumulative:
             return gem
     return None
+
+def can_smelt_any_bar_pure(inventory, smithing_level, bar_data):
+    """
+    Return True if at least one bar can be smelted given the player's smithing_level and inventory.
+    bar_data format: { bar_name: {"level": int, "ore_required": {ore: amount}} }
+    """
+    for _, data in bar_data.items():
+        if smithing_level >= data.get("level", 0):
+            if all(inventory.get(ore, 0) >= amount for ore, amount in data.get("ore_required", {}).items()):
+                return True
+    return False
+
+def create_soft_clay_pure(inventory):
+    """
+    Deduct 1 "Clay" and add 1 "Soft clay" if possible.
+    Returns (new_inventory, success: bool). Does not mutate input.
+    """
+    current_clay = inventory.get("Clay", 0)
+    if current_clay > 0:
+        new_inv = dict(inventory)
+        new_inv["Clay"] = current_clay - 1
+        new_inv["Soft clay"] = new_inv.get("Soft clay", 0) + 1
+        return new_inv, True
+    return inventory, False
+
+def has_crafting_materials_pure(item, inventory, crafting_data):
+    """
+    Return True if inventory satisfies crafting requirements for the given item.
+    """
+    requirements = crafting_data[item].get("requirements", {})
+    for material, amount in requirements.items():
+        if inventory.get(material, 0) < amount:
+            return False
+    return True
+
+def apply_crafting_pure(item, inventory, crafting_data):
+    """
+    If inventory meets requirements, deduct inputs and return (new_inventory, exp, success).
+    Does not mutate input inventory.
+    """
+    if not has_crafting_materials_pure(item, inventory, crafting_data):
+        return inventory, 0, False
+    new_inv = dict(inventory)
+    for material, amount in crafting_data[item].get("requirements", {}).items():
+        new_inv[material] = new_inv.get(material, 0) - amount
+    # Add the crafted item to inventory if it's a tangible product (exclude placeholders like "None")
+    if item not in ("None",):
+        new_inv[item] = new_inv.get(item, 0) + 1
+    exp = crafting_data[item].get("exp", 0)
+    return new_inv, exp, True
+
+def apply_smelt_pure(bar_name, inventory, bar_data):
+    """
+    Attempt to smelt a specific bar. Returns (new_inventory, exp, success).
+    Does not mutate input inventory. Only checks materials; level checks should be handled by caller.
+    bar_data format: { bar_name: {"exp": float, "ore_required": {ore: amount}} }
+    """
+    spec = bar_data.get(bar_name)
+    if not spec:
+        return inventory, 0, False
+    requirements = spec.get("ore_required", {})
+    # Check materials
+    if not all(inventory.get(ore, 0) >= amount for ore, amount in requirements.items()):
+        return inventory, 0, False
+    # Deduct and add bar
+    new_inv = dict(inventory)
+    for ore, amount in requirements.items():
+        new_inv[ore] = new_inv.get(ore, 0) - amount
+    new_inv[bar_name] = new_inv.get(bar_name, 0) + 1
+    return new_inv, spec.get("exp", 0), True

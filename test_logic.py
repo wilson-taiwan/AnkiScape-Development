@@ -5,6 +5,11 @@ from logic_pure import (
     get_newly_completed_achievements,
     calculate_probability_with_level,
     pick_gem,
+    can_smelt_any_bar_pure,
+    create_soft_clay_pure,
+    has_crafting_materials_pure,
+    apply_crafting_pure,
+    apply_smelt_pure,
 )
 
 class TestLogic(unittest.TestCase):
@@ -103,6 +108,70 @@ class TestLogic(unittest.TestCase):
             "Emerald": {"probability": 0.4},
         }
         self.assertIsNone(pick_gem(partial, 0.9))
+
+    def test_can_smelt_any_bar_pure(self):
+        bar_data = {
+            "Bronze bar": {"level": 1, "ore_required": {"Copper ore": 1, "Tin ore": 1}},
+            "Iron bar": {"level": 15, "ore_required": {"Iron ore": 1}},
+        }
+        inv = {"Copper ore": 1, "Tin ore": 1}
+        self.assertTrue(can_smelt_any_bar_pure(inv, 1, bar_data))
+        self.assertFalse(can_smelt_any_bar_pure({}, 99, bar_data))
+        self.assertFalse(can_smelt_any_bar_pure({"Copper ore": 1}, 99, bar_data))
+
+    def test_create_soft_clay_pure(self):
+        inv = {"Clay": 2}
+        new_inv, ok = create_soft_clay_pure(inv)
+        self.assertTrue(ok)
+        self.assertEqual(new_inv["Clay"], 1)
+        self.assertEqual(new_inv.get("Soft clay"), 1)
+        # Original inventory not mutated
+        self.assertEqual(inv["Clay"], 2)
+        # Failure path
+        new_inv2, ok2 = create_soft_clay_pure({})
+        self.assertFalse(ok2)
+        self.assertEqual(new_inv2, {})
+
+    def test_has_crafting_materials_and_apply(self):
+        crafting_data = {
+            "Soft clay": {"level": 1, "exp": 0, "requirements": {"Clay": 1}},
+            "Gold ring": {"level": 5, "exp": 15, "requirements": {"Gold bar": 1}},
+        }
+        inv = {"Clay": 1, "Gold bar": 1}
+        self.assertTrue(has_crafting_materials_pure("Soft clay", inv, crafting_data))
+        self.assertTrue(has_crafting_materials_pure("Gold ring", inv, crafting_data))
+
+        new_inv, exp, ok = apply_crafting_pure("Soft clay", inv, crafting_data)
+        self.assertTrue(ok)
+        self.assertEqual(exp, 0)
+        self.assertEqual(new_inv.get("Soft clay"), 1)
+        self.assertEqual(new_inv.get("Clay"), 0)
+
+        new_inv2, exp2, ok2 = apply_crafting_pure("Gold ring", inv, crafting_data)
+        self.assertTrue(ok2)
+        self.assertEqual(exp2, 15)
+        self.assertEqual(new_inv2.get("Gold ring"), 1)
+        self.assertEqual(new_inv2.get("Gold bar"), 0)
+
+    def test_apply_smelt_pure(self):
+        bar_data = {
+            "Bronze bar": {"level": 1, "exp": 6.2, "ore_required": {"Copper ore": 1, "Tin ore": 1}},
+            "Iron bar": {"level": 15, "exp": 12.5, "ore_required": {"Iron ore": 1}},
+        }
+        inv = {"Copper ore": 1, "Tin ore": 1}
+        new_inv, exp, ok = apply_smelt_pure("Bronze bar", inv, bar_data)
+        self.assertTrue(ok)
+        self.assertAlmostEqual(exp, 6.2)
+        self.assertEqual(new_inv.get("Bronze bar"), 1)
+        self.assertEqual(new_inv.get("Copper ore"), 0)
+        self.assertEqual(new_inv.get("Tin ore"), 0)
+
+        # Failure when missing materials
+        inv2 = {"Copper ore": 1}
+        new_inv2, exp2, ok2 = apply_smelt_pure("Bronze bar", inv2, bar_data)
+        self.assertFalse(ok2)
+        self.assertEqual(exp2, 0)
+        self.assertEqual(new_inv2, inv2)
 
 if __name__ == "__main__":
     unittest.main()
