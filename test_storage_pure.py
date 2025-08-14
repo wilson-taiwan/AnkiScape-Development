@@ -52,7 +52,7 @@ class TestStoragePure(unittest.TestCase):
         self.assertEqual(migrated["smithing_level"], 1)
         self.assertEqual(migrated["crafting_level"], 1)
         self.assertEqual(migrated["current_bar"], "Bronze bar")
-        self.assertEqual(migrated["current_craft"], "None")
+        self.assertEqual(migrated["current_craft"], "")
         # Inventory preserved and completed with ore keys
         self.assertEqual(migrated["inventory"]["Copper ore"], 2)
         for ore in ORE_DATA:
