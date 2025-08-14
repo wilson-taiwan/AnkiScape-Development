@@ -142,70 +142,173 @@ def show_achievement_dialog(achievement: str, data: dict):
     dialog.exec()
 
 
-_menu_actions = {
-    "ore": None,
-    "tree": None,
-    "bar": None,
-    "craft": None,
-    "stats": None,
-    "achievements": None,
-}
-
-
-def create_menu(
-    on_skill_selection,
-    on_ore_selection,
-    on_tree_selection,
-    on_bar_selection,
-    on_craft_selection,
-    on_stats,
-    on_achievements,
-):
-    """Create the AnkiScape menu and wire callbacks. Stores action refs for visibility updates."""
+def create_menu(on_main_menu):
+    """Create a single AnkiScape > Menu entry that opens the consolidated window."""
     menu = QMenu("AnkiScape", mw)
     mw.form.menubar.addMenu(menu)
-
-    skill_selection_action = menu.addAction("Skill Selection")
-    skill_selection_action.triggered.connect(on_skill_selection)
-
-    _menu_actions["ore"] = menu.addAction("Ore Selection")
-    _menu_actions["ore"].triggered.connect(on_ore_selection)
-    _menu_actions["ore"].setVisible(False)
-
-    _menu_actions["tree"] = menu.addAction("Tree Selection")
-    _menu_actions["tree"].triggered.connect(on_tree_selection)
-    _menu_actions["tree"].setVisible(False)
-
-    _menu_actions["bar"] = menu.addAction("Bar Selection")
-    _menu_actions["bar"].triggered.connect(on_bar_selection)
-    _menu_actions["bar"].setVisible(False)
-
-    _menu_actions["craft"] = menu.addAction("Craft Selection")
-    _menu_actions["craft"].triggered.connect(on_craft_selection)
-    _menu_actions["craft"].setVisible(False)
-
-    _menu_actions["stats"] = menu.addAction("Stats")
-    _menu_actions["stats"].triggered.connect(on_stats)
-    _menu_actions["stats"].setVisible(False)
-
-    _menu_actions["achievements"] = menu.addAction("Achievements")
-    _menu_actions["achievements"].triggered.connect(on_achievements)
-    _menu_actions["achievements"].setVisible(False)
+    main_action = menu.addAction("Menu")
+    main_action.triggered.connect(on_main_menu)
 
 
 def update_menu_visibility(current_skill: str):
-    """Show/hide actions based on current skill."""
-    if not all(k in _menu_actions for k in ["ore", "tree", "bar", "craft", "stats", "achievements"]):
-        return
-    if _menu_actions["ore"] is None:
-        return
-    _menu_actions["ore"].setVisible(current_skill == "Mining")
-    _menu_actions["tree"].setVisible(current_skill == "Woodcutting")
-    _menu_actions["bar"].setVisible(current_skill == "Smithing")
-    _menu_actions["craft"].setVisible(current_skill == "Crafting")
-    visible = current_skill in ["Mining", "Woodcutting", "Smithing", "Crafting"]
-    _menu_actions["stats"].setVisible(visible)
-    _menu_actions["achievements"].setVisible(visible)
+    """No-op: single consolidated menu item is always visible."""
+    return
+
+
+def show_main_menu(
+    player_data: dict,
+    current_skill: str,
+    can_smelt_any_bar: bool,
+    on_save_skill,
+    on_set_ore,
+    on_set_tree,
+    on_set_bar,
+    on_set_craft,
+    on_open_stats,
+    on_open_achievements,
+):
+    """Show a consolidated window with tabs for Skills, Mining, Woodcutting, Smithing, Crafting,
+    and quick access buttons for Stats and Achievements.
+    Callbacks apply changes and handle persistence in the caller.
+    """
+    dialog = QDialog(mw)
+    dialog.setWindowTitle("AnkiScape Menu")
+    dialog.setMinimumWidth(700)
+    dialog.setMinimumHeight(600)
+
+    layout = QVBoxLayout()
+    tabs = QTabWidget()
+
+    # Skills tab
+    skills_tab = QWidget()
+    s_layout = QVBoxLayout(skills_tab)
+    skill_combo = QComboBox()
+    skills = ["None", "Mining", "Woodcutting", "Smithing", "Crafting"]
+    skill_combo.addItems(skills)
+    skill_combo.setCurrentText(current_skill)
+    s_layout.addWidget(QLabel("Current Skill:"))
+    s_layout.addWidget(skill_combo)
+    warn = QLabel("")
+    warn.setStyleSheet("color: red;")
+    s_layout.addWidget(warn)
+
+    def _update_warn():
+        if skill_combo.currentText() == "Smithing" and not can_smelt_any_bar:
+            warn.setText("You don't have enough ores to smelt any bars. Mine some ores first!")
+        else:
+            warn.setText("")
+
+    _update_warn()
+    skill_combo.currentTextChanged.connect(lambda _: _update_warn())
+    save_btn = QPushButton("Save Skill")
+    save_btn.clicked.connect(lambda: on_save_skill(skill_combo.currentText()))
+    s_layout.addWidget(save_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(skills_tab, "Skills")
+
+    # Mining tab
+    mining_tab = QWidget()
+    m_layout = QVBoxLayout(mining_tab)
+    m_layout.addWidget(QLabel("Select Ore to Mine"))
+    ore_list = QListWidget()
+    for ore, data in ORE_DATA.items():
+        item = QListWidgetItem(f"{ore} (Lvl {data['level']})")
+        item.setData(Qt.ItemDataRole.UserRole, ore)
+        if not can_mine_ore_pure(player_data.get("mining_level", 1), ore, ORE_DATA):
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+        ore_list.addItem(item)
+        if ore == player_data.get("current_ore"):
+            ore_list.setCurrentItem(item)
+    m_layout.addWidget(ore_list)
+    m_apply = QPushButton("Apply")
+    def _apply_ore():
+        current = ore_list.currentItem()
+        if current:
+            on_set_ore(current.data(Qt.ItemDataRole.UserRole))
+    m_apply.clicked.connect(_apply_ore)
+    m_layout.addWidget(m_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(mining_tab, "Mining")
+
+    # Woodcutting tab
+    wood_tab = QWidget()
+    w_layout = QVBoxLayout(wood_tab)
+    w_layout.addWidget(QLabel("Select Tree to Cut"))
+    tree_list = QListWidget()
+    for tree, data in TREE_DATA.items():
+        item = QListWidgetItem(f"{tree} (Lvl {data['level']})")
+        item.setData(Qt.ItemDataRole.UserRole, tree)
+        if not can_cut_tree_pure(player_data.get("woodcutting_level", 1), tree, TREE_DATA):
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+        tree_list.addItem(item)
+        if tree == player_data.get("current_tree"):
+            tree_list.setCurrentItem(item)
+    w_layout.addWidget(tree_list)
+    w_apply = QPushButton("Apply")
+    w_apply.clicked.connect(lambda: tree_list.currentItem() and on_set_tree(tree_list.currentItem().data(Qt.ItemDataRole.UserRole)))
+    w_layout.addWidget(w_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(wood_tab, "Woodcutting")
+
+    # Smithing tab
+    smith_tab = QWidget()
+    sm_layout = QVBoxLayout(smith_tab)
+    sm_layout.addWidget(QLabel("Select Bar to Smelt"))
+    bar_list = QListWidget()
+    for bar, data in BAR_DATA.items():
+        item = QListWidgetItem(f"{bar} (Lvl {data['level']})")
+        item.setData(Qt.ItemDataRole.UserRole, bar)
+        if data.get("level", 1) > player_data.get("smithing_level", 1):
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+        bar_list.addItem(item)
+        if bar == player_data.get("current_bar"):
+            bar_list.setCurrentItem(item)
+    sm_layout.addWidget(bar_list)
+    sm_apply = QPushButton("Apply")
+    sm_apply.clicked.connect(lambda: bar_list.currentItem() and on_set_bar(bar_list.currentItem().data(Qt.ItemDataRole.UserRole)))
+    sm_layout.addWidget(sm_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(smith_tab, "Smithing")
+
+    # Crafting tab
+    craft_tab = QWidget()
+    c_layout = QVBoxLayout(craft_tab)
+    c_layout.addWidget(QLabel("Select Item to Craft"))
+    craft_list = QListWidget()
+    for item_name, spec in CRAFTING_DATA.items():
+        item = QListWidgetItem(f"{item_name} (Lvl {spec['level']})")
+        item.setData(Qt.ItemDataRole.UserRole, item_name)
+        if not can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA):
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled)
+        craft_list.addItem(item)
+        if item_name == player_data.get("current_craft"):
+            craft_list.setCurrentItem(item)
+    c_layout.addWidget(craft_list)
+    c_apply = QPushButton("Apply")
+    c_apply.clicked.connect(lambda: craft_list.currentItem() and on_set_craft(craft_list.currentItem().data(Qt.ItemDataRole.UserRole)))
+    c_layout.addWidget(c_apply, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(craft_tab, "Crafting")
+
+    # Stats tab
+    stats_tab = QWidget()
+    st_layout = QVBoxLayout(stats_tab)
+    st_layout.addWidget(QLabel("Open detailed stats in a dialog"))
+    st_btn = QPushButton("Open Stats")
+    st_btn.clicked.connect(on_open_stats)
+    st_layout.addWidget(st_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(stats_tab, "Stats")
+
+    # Achievements tab
+    ach_tab = QWidget()
+    a_layout = QVBoxLayout(ach_tab)
+    a_layout.addWidget(QLabel("Open achievements in a dialog"))
+    a_btn = QPushButton("Open Achievements")
+    a_btn.clicked.connect(on_open_achievements)
+    a_layout.addWidget(a_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+    tabs.addTab(ach_tab, "Achievements")
+
+    layout.addWidget(tabs)
+    close = QPushButton("Close")
+    close.clicked.connect(dialog.accept)
+    layout.addWidget(close, alignment=Qt.AlignmentFlag.AlignRight)
+    dialog.setLayout(layout)
+    dialog.exec()
 
 
 def show_tree_selection_dialog(current_tree: str, woodcutting_level: int, TREE_DATA: dict, TREE_IMAGES: dict) -> Optional[str]:

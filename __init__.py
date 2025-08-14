@@ -181,16 +181,28 @@ def show_ore_selection():
 
 
 
-def initialize_menu():
-    ui.create_menu(
-        on_skill_selection=show_skill_selection,
-        on_ore_selection=show_ore_selection,
-        on_tree_selection=show_tree_selection,
-        on_bar_selection=show_bar_selection,
-        on_craft_selection=show_craft_selection,
-        on_stats=lambda: ui.show_stats(player_data, current_skill),
-        on_achievements=lambda: ui.show_achievements(player_data),
+def _on_main_menu():
+    ui.show_main_menu(
+        player_data,
+        current_skill,
+        can_smelt_any_bar(),
+        on_save_skill=lambda skill: save_skill(skill, None),
+        on_set_ore=lambda ore: _set_value("current_ore", ore),
+        on_set_tree=lambda tree: _set_value("current_tree", tree),
+        on_set_bar=lambda bar: _set_value("current_bar", bar),
+        on_set_craft=lambda item: _set_value("current_craft", item),
+        on_open_stats=lambda: ui.show_stats(player_data, current_skill),
+        on_open_achievements=lambda: ui.show_achievements(player_data),
     )
+
+
+def _set_value(key: str, value):
+    player_data[key] = value
+    save_player_data()
+
+
+def initialize_menu():
+    ui.create_menu(on_main_menu=_on_main_menu)
 
 
 # Main functionality

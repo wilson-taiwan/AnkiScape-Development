@@ -1,10 +1,26 @@
 # logic_pure.py - Pure logic functions for AnkiScape (no Anki dependencies)
 
 def get_exp_to_next_level(player_data, EXP_TABLE):
-    current_level = player_data["mining_level"]
+    """Return exp needed to reach the next level for Mining.
+    Supports EXP_TABLE as list or dict. Uses mining_exp, falls back to legacy total_exp.
+    When at or beyond max level or threshold missing, returns 0.
+    """
+    current_level = player_data.get("mining_level", player_data.get("level", 1))
     if current_level >= 99:
         return 0
-    return EXP_TABLE[current_level] - player_data["mining_exp"]
+    # Determine threshold for next level from EXP_TABLE
+    if isinstance(EXP_TABLE, dict):
+        threshold = EXP_TABLE.get(current_level)
+    else:
+        try:
+            threshold = EXP_TABLE[current_level]
+        except (IndexError, TypeError):
+            threshold = None
+    if threshold is None:
+        return 0
+    skill_exp = player_data.get("mining_exp", player_data.get("total_exp", 0))
+    needed = threshold - skill_exp
+    return needed if needed > 0 else 0
 
 def calculate_new_level(skill_exp, current_level, EXP_TABLE):
     """
@@ -86,29 +102,31 @@ def create_soft_clay_pure(inventory):
     return inventory, False
 
 def has_crafting_materials_pure(item, inventory, crafting_data):
+    """Return True if inventory satisfies crafting requirements for the given item.
+    Unknown items return False.
     """
-    Return True if inventory satisfies crafting requirements for the given item.
-    """
-    requirements = crafting_data[item].get("requirements", {})
+    spec = crafting_data.get(item)
+    if not spec:
+        return False
+    requirements = spec.get("requirements", {})
     for material, amount in requirements.items():
         if inventory.get(material, 0) < amount:
             return False
     return True
 
 def apply_crafting_pure(item, inventory, crafting_data):
+    """If inventory meets requirements, deduct inputs and return (new_inventory, exp, success).
+    Does not mutate input inventory. Unknown items return (inventory, 0, False).
     """
-    If inventory meets requirements, deduct inputs and return (new_inventory, exp, success).
-    Does not mutate input inventory.
-    """
-    if not has_crafting_materials_pure(item, inventory, crafting_data):
+    spec = crafting_data.get(item)
+    if not spec or not has_crafting_materials_pure(item, inventory, crafting_data):
         return inventory, 0, False
     new_inv = dict(inventory)
-    for material, amount in crafting_data[item].get("requirements", {}).items():
+    for material, amount in spec.get("requirements", {}).items():
         new_inv[material] = new_inv.get(material, 0) - amount
-    # Add the crafted item to inventory if it's a tangible product (exclude placeholders like "None")
     if item not in ("None",):
         new_inv[item] = new_inv.get(item, 0) + 1
-    exp = crafting_data[item].get("exp", 0)
+    exp = spec.get("exp", 0)
     return new_inv, exp, True
 
 def apply_smelt_pure(bar_name, inventory, bar_data):
