@@ -10,6 +10,11 @@ from logic_pure import (
     has_crafting_materials_pure,
     apply_crafting_pure,
     apply_smelt_pure,
+    apply_woodcutting_pure,
+    apply_mining_pure,
+    can_mine_ore_pure,
+    can_cut_tree_pure,
+    can_craft_item_pure,
 )
 
 class TestLogic(unittest.TestCase):
@@ -172,6 +177,68 @@ class TestLogic(unittest.TestCase):
         self.assertFalse(ok2)
         self.assertEqual(exp2, 0)
         self.assertEqual(new_inv2, inv2)
+
+    def test_apply_woodcutting_pure(self):
+        tree_data = {"Oak": {"exp": 15, "probability": 0.8}}
+        inv = {}
+        # success when r < p
+        new_inv, exp, ok = apply_woodcutting_pure("Oak", inv, tree_data, r_action=0.1, success_probability=0.5)
+        self.assertTrue(ok)
+        self.assertEqual(exp, 15)
+        self.assertEqual(new_inv.get("Oak"), 1)
+        # failure when r >= p
+        new_inv2, exp2, ok2 = apply_woodcutting_pure("Oak", inv, tree_data, r_action=0.6, success_probability=0.5)
+        self.assertFalse(ok2)
+        self.assertEqual(exp2, 0)
+        self.assertEqual(new_inv2, inv)
+
+    def test_apply_mining_pure_with_gem(self):
+        ore_data = {"Iron ore": {"exp": 35, "probability": 0.8}}
+        gem_data = {
+            "Uncut sapphire": {"probability": 0.5, "exp": 50},
+            "Uncut emerald": {"probability": 0.5, "exp": 67.5},
+        }
+        inv = {}
+        # Force success and gem drop; pick first gem via r_gem_pick
+        new_inv, exp, ok, gem = apply_mining_pure(
+            "Iron ore", inv, ore_data, gem_data,
+            r_action=0.1, success_probability=0.5,
+            r_gem_chance=0.0, r_gem_pick=0.1, gem_drop_chance=1.0  # make drop guaranteed for test
+        )
+        self.assertTrue(ok)
+        self.assertEqual(gem, "Uncut sapphire")
+        self.assertEqual(new_inv.get("Iron ore"), 1)
+        self.assertEqual(new_inv.get("Uncut sapphire"), 1)
+        self.assertAlmostEqual(exp, 35 + 50)
+        # Failure when action doesn't succeed
+        new_inv2, exp2, ok2, gem2 = apply_mining_pure(
+            "Iron ore", inv, ore_data, gem_data,
+            r_action=0.9, success_probability=0.5,
+            r_gem_chance=0.0, r_gem_pick=0.1,
+        )
+        self.assertFalse(ok2)
+        self.assertEqual(exp2, 0)
+        self.assertIsNone(gem2)
+        self.assertEqual(new_inv2, inv)
+
+    def test_can_mine_and_cut_pure(self):
+        ore_data = {"Copper ore": {"level": 1}, "Iron ore": {"level": 15}}
+        tree_data = {"Tree": {"level": 1}, "Oak": {"level": 15}}
+        self.assertTrue(can_mine_ore_pure(1, "Copper ore", ore_data))
+        self.assertFalse(can_mine_ore_pure(1, "Iron ore", ore_data))
+        self.assertTrue(can_cut_tree_pure(1, "Tree", tree_data))
+        self.assertFalse(can_cut_tree_pure(1, "Oak", tree_data))
+
+    def test_can_craft_item_pure(self):
+        crafting_data = {
+            "Gold ring": {"level": 5, "requirements": {"Gold bar": 1}},
+            "Soft clay": {"level": 1, "requirements": {"Clay": 1}},
+        }
+        inv = {"Gold bar": 1, "Clay": 1}
+        self.assertFalse(can_craft_item_pure(1, inv, "Gold ring", crafting_data))  # level too low
+        self.assertTrue(can_craft_item_pure(5, inv, "Gold ring", crafting_data))
+        self.assertTrue(can_craft_item_pure(1, inv, "Soft clay", crafting_data))
+        self.assertFalse(can_craft_item_pure(1, {}, "Soft clay", crafting_data))  # missing material
 
 if __name__ == "__main__":
     unittest.main()

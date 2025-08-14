@@ -9,10 +9,23 @@ def get_exp_to_next_level(player_data, EXP_TABLE):
 def calculate_new_level(skill_exp, current_level, EXP_TABLE):
     """
     Calculate the new level for a skill given experience, current level, and EXP_TABLE.
+    Supports EXP_TABLE as a dict (level -> threshold) or a list where index (level-1) stores threshold.
     Returns the new level (int).
     """
     new_level = current_level
-    while new_level < 99 and EXP_TABLE.get(new_level + 1) is not None and skill_exp >= EXP_TABLE[new_level + 1]:
+    while new_level < 99:
+        # Determine threshold to reach next level (new_level+1)
+        if isinstance(EXP_TABLE, dict):
+            threshold = EXP_TABLE.get(new_level + 1)
+        else:
+            try:
+                # In list form, index equals current level (new_level) for threshold to reach next level
+                threshold = EXP_TABLE[new_level]
+            except (IndexError, TypeError):
+                threshold = None
+
+        if threshold is None or skill_exp < threshold:
+            break
         new_level += 1
     return new_level
 
@@ -117,3 +130,73 @@ def apply_smelt_pure(bar_name, inventory, bar_data):
         new_inv[ore] = new_inv.get(ore, 0) - amount
     new_inv[bar_name] = new_inv.get(bar_name, 0) + 1
     return new_inv, spec.get("exp", 0), True
+
+def apply_woodcutting_pure(tree_name, inventory, tree_data, r_action, success_probability):
+    """
+    Attempt a woodcutting action. Returns (new_inventory, exp_gained, success).
+    Does not mutate input inventory. The caller provides a random draw and success probability.
+    """
+    success = r_action < success_probability
+    if not success:
+        return inventory, 0, False
+    new_inv = dict(inventory)
+    new_inv[tree_name] = new_inv.get(tree_name, 0) + 1
+    exp = tree_data[tree_name].get("exp", 0)
+    return new_inv, exp, True
+
+def apply_mining_pure(
+    ore_name,
+    inventory,
+    ore_data,
+    gem_data,
+    r_action,
+    success_probability,
+    r_gem_chance=None,
+    r_gem_pick=None,
+    gem_drop_chance=1/256,
+):
+    """
+    Attempt a mining action. Returns (new_inventory, exp_gained, success, gem_name).
+    If success, may also award a gem using provided randoms and gem_drop_chance.
+    Does not mutate input inventory.
+    """
+    success = r_action < success_probability
+    if not success:
+        return inventory, 0, False, None
+    new_inv = dict(inventory)
+    new_inv[ore_name] = new_inv.get(ore_name, 0) + 1
+    exp = ore_data[ore_name].get("exp", 0)
+
+    gem_name = None
+    if r_gem_chance is not None and r_gem_pick is not None and r_gem_chance < gem_drop_chance:
+        gem_name = pick_gem(gem_data, r_gem_pick)
+        if gem_name:
+            new_inv[gem_name] = new_inv.get(gem_name, 0) + 1
+            exp += gem_data[gem_name].get("exp", 0)
+    return new_inv, exp, True, gem_name
+
+
+def can_mine_ore_pure(mining_level, ore_name, ore_data):
+    """Return True if mining_level meets the ore's required level."""
+    spec = ore_data.get(ore_name)
+    if not spec:
+        return False
+    return mining_level >= spec.get("level", 1)
+
+
+def can_cut_tree_pure(woodcutting_level, tree_name, tree_data):
+    """Return True if woodcutting_level meets the tree's required level."""
+    spec = tree_data.get(tree_name)
+    if not spec:
+        return False
+    return woodcutting_level >= spec.get("level", 1)
+
+
+def can_craft_item_pure(crafting_level, inventory, item, crafting_data):
+    """Return True if level and materials allow crafting the item."""
+    spec = crafting_data.get(item)
+    if not spec:
+        return False
+    if crafting_level < spec.get("level", 1):
+        return False
+    return has_crafting_materials_pure(item, inventory, crafting_data)
