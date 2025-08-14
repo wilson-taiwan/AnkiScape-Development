@@ -142,9 +142,70 @@ def show_achievement_dialog(achievement: str, data: dict):
     dialog.exec()
 
 
-def update_menu_visibility():
-    """No-op placeholder; real menu visibility is managed in __init__.py."""
-    pass
+_menu_actions = {
+    "ore": None,
+    "tree": None,
+    "bar": None,
+    "craft": None,
+    "stats": None,
+    "achievements": None,
+}
+
+
+def create_menu(
+    on_skill_selection,
+    on_ore_selection,
+    on_tree_selection,
+    on_bar_selection,
+    on_craft_selection,
+    on_stats,
+    on_achievements,
+):
+    """Create the AnkiScape menu and wire callbacks. Stores action refs for visibility updates."""
+    menu = QMenu("AnkiScape", mw)
+    mw.form.menubar.addMenu(menu)
+
+    skill_selection_action = menu.addAction("Skill Selection")
+    skill_selection_action.triggered.connect(on_skill_selection)
+
+    _menu_actions["ore"] = menu.addAction("Ore Selection")
+    _menu_actions["ore"].triggered.connect(on_ore_selection)
+    _menu_actions["ore"].setVisible(False)
+
+    _menu_actions["tree"] = menu.addAction("Tree Selection")
+    _menu_actions["tree"].triggered.connect(on_tree_selection)
+    _menu_actions["tree"].setVisible(False)
+
+    _menu_actions["bar"] = menu.addAction("Bar Selection")
+    _menu_actions["bar"].triggered.connect(on_bar_selection)
+    _menu_actions["bar"].setVisible(False)
+
+    _menu_actions["craft"] = menu.addAction("Craft Selection")
+    _menu_actions["craft"].triggered.connect(on_craft_selection)
+    _menu_actions["craft"].setVisible(False)
+
+    _menu_actions["stats"] = menu.addAction("Stats")
+    _menu_actions["stats"].triggered.connect(on_stats)
+    _menu_actions["stats"].setVisible(False)
+
+    _menu_actions["achievements"] = menu.addAction("Achievements")
+    _menu_actions["achievements"].triggered.connect(on_achievements)
+    _menu_actions["achievements"].setVisible(False)
+
+
+def update_menu_visibility(current_skill: str):
+    """Show/hide actions based on current skill."""
+    if not all(k in _menu_actions for k in ["ore", "tree", "bar", "craft", "stats", "achievements"]):
+        return
+    if _menu_actions["ore"] is None:
+        return
+    _menu_actions["ore"].setVisible(current_skill == "Mining")
+    _menu_actions["tree"].setVisible(current_skill == "Woodcutting")
+    _menu_actions["bar"].setVisible(current_skill == "Smithing")
+    _menu_actions["craft"].setVisible(current_skill == "Crafting")
+    visible = current_skill in ["Mining", "Woodcutting", "Smithing", "Crafting"]
+    _menu_actions["stats"].setVisible(visible)
+    _menu_actions["achievements"].setVisible(visible)
 
 
 def show_tree_selection_dialog(current_tree: str, woodcutting_level: int, TREE_DATA: dict, TREE_IMAGES: dict) -> Optional[str]:

@@ -1,6 +1,17 @@
 # __init__.py
 
-from .constants import *
+from .constants import (
+    ORE_DATA,
+    TREE_DATA,
+    BAR_DATA,
+    GEM_DATA,
+    CRAFTING_DATA,
+    ORE_IMAGES,
+    TREE_IMAGES,
+    BAR_IMAGES,
+    GEM_IMAGES,
+    CRAFTED_ITEM_IMAGES,
+)
 from aqt import mw, gui_hooks
 from aqt.utils import showInfo
 from aqt.qt import *
@@ -33,6 +44,7 @@ from .ui import (
     show_ore_selection_dialog,
 )
 from . import ui
+from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
 
 global card_turned, exp_awarded, answer_shown
 
@@ -49,58 +61,14 @@ def show_review_popup():
 # Classes moved to ui.py
 
 
-# Helper functions
 def save_player_data():
-    mw.col.set_config("ankiscape_player_data", player_data)
-    mw.col.set_config("ankiscape_current_skill", current_skill)
+    storage_save_player_data(player_data, current_skill)
+
 
 def load_player_data():
     global player_data, current_skill
-
-    # Define default_values at the beginning of the function
-    default_values = {
-        "mining_level": 1,
-        "woodcutting_level": 1,
-        "smithing_level": 1,
-        "crafting_level": 1,
-        "mining_exp": 0,
-        "woodcutting_exp": 0,
-        "smithing_exp": 0,
-        "crafting_exp": 0,
-        "current_craft": "None",
-        "current_ore": "Rune essence",
-        "current_tree": "Tree",
-        "current_bar": "Bronze bar",
-        "inventory": {ore: 0 for ore in ORE_DATA},
-        "progress_to_next": 0,
-        "completed_achievements": [],
-    }
-
-    loaded_data = mw.col.get_config("ankiscape_player_data")
-    if loaded_data:
-        if "smithing_level" not in loaded_data:
-            loaded_data["smithing_level"] = 1
-            loaded_data["smithing_exp"] = 0
-            loaded_data["current_bar"] = "Bronze bar"
-
-        # Check if the loaded data is using the old format
-        if "total_exp" in loaded_data:
-            # Migrate the old format to the new format
-            loaded_data["mining_exp"] = loaded_data.pop("total_exp")
-            loaded_data["woodcutting_exp"] = 0
-
-        # Ensure all new fields are present with default values
-        for key, value in default_values.items():
-            if key not in loaded_data:
-                loaded_data[key] = value
-
-        player_data = loaded_data
-    else:
-        # If no data is loaded, initialize with default values
-        player_data = default_values
-
-    current_skill = mw.col.get_config("ankiscape_current_skill", default="None")
-    update_menu_visibility()
+    player_data, current_skill = storage_load_player_data()
+    ui.update_menu_visibility(current_skill)
 
 ## Removed legacy get_exp_to_next_level stub; use logic_pure.get_exp_to_next_level in tests/pure logic.
 
@@ -109,7 +77,7 @@ def load_player_data():
 def initialize_skill():
     global current_skill
     current_skill = mw.col.get_config("ankiscape_current_skill", default="None")
-    update_menu_visibility()
+    ui.update_menu_visibility(current_skill)
 
 
 def show_skill_selection():
@@ -125,18 +93,11 @@ def save_skill(skill, dialog):
         show_error_message("No Ores Available", "You don't have enough ores to smelt any bars. Mine some ores first!")
     else:
         current_skill = skill
-        update_menu_visibility()
+        ui.update_menu_visibility(current_skill)
         if dialog:
             dialog.accept()
 
-def update_menu_visibility():
-    global current_skill
-    ore_selection_action.setVisible(current_skill == "Mining")
-    tree_selection_action.setVisible(current_skill == "Woodcutting")
-    bar_selection_action.setVisible(current_skill == "Smithing")
-    craft_selection_action.setVisible(current_skill == "Crafting")
-    stats_action.setVisible(current_skill in ["Mining", "Woodcutting", "Smithing", "Crafting"])
-    achievements_action.setVisible(current_skill in ["Mining", "Woodcutting", "Smithing", "Crafting"])
+## menu visibility now handled by ui.update_menu_visibility
 
 ## show_achievement_dialog provided by ui.py
 
@@ -220,39 +181,16 @@ def show_ore_selection():
 
 
 
-# UI
-def create_menu():
-    global menu, ore_selection_action, tree_selection_action, bar_selection_action, craft_selection_action, stats_action, achievements_action
-    menu = QMenu("AnkiScape", mw)
-    mw.form.menubar.addMenu(menu)
-
-    skill_selection_action = menu.addAction("Skill Selection")
-    skill_selection_action.triggered.connect(show_skill_selection)
-
-    # Add Ore Selection, Tree Selection, Stats, and Achievements (initially hidden)
-    ore_selection_action = menu.addAction("Ore Selection")
-    ore_selection_action.triggered.connect(show_ore_selection)
-    ore_selection_action.setVisible(False)
-
-    tree_selection_action = menu.addAction("Tree Selection")
-    tree_selection_action.triggered.connect(show_tree_selection)
-    tree_selection_action.setVisible(False)
-
-    bar_selection_action = menu.addAction("Bar Selection")
-    bar_selection_action.triggered.connect(show_bar_selection)
-    bar_selection_action.setVisible(False)
-
-    craft_selection_action = menu.addAction("Craft Selection")
-    craft_selection_action.triggered.connect(show_craft_selection)
-    craft_selection_action.setVisible(False)
-
-    stats_action = menu.addAction("Stats")
-    stats_action.triggered.connect(lambda: ui.show_stats(player_data, current_skill))
-    stats_action.setVisible(False)
-
-    achievements_action = menu.addAction("Achievements")
-    achievements_action.triggered.connect(lambda: ui.show_achievements(player_data))
-    achievements_action.setVisible(False)
+def initialize_menu():
+    ui.create_menu(
+        on_skill_selection=show_skill_selection,
+        on_ore_selection=show_ore_selection,
+        on_tree_selection=show_tree_selection,
+        on_bar_selection=show_bar_selection,
+        on_craft_selection=show_craft_selection,
+        on_stats=lambda: ui.show_stats(player_data, current_skill),
+        on_achievements=lambda: ui.show_achievements(player_data),
+    )
 
 
 # Main functionality
@@ -419,6 +357,7 @@ def initialize_exp_popup():
 addHook("profileLoaded", load_player_data)
 addHook("profileLoaded", initialize_exp_popup)
 addHook("profileLoaded", initialize_skill)
+addHook("profileLoaded", initialize_menu)
 addHook("profileLoaded", show_review_popup)
 
 gui_hooks.reviewer_did_show_question.append(on_card_did_show)
@@ -427,5 +366,4 @@ gui_hooks.reviewer_did_show_answer.append(on_show_answer)
 
 Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
 
-# Initialize menu
-create_menu()
+# Menu is created on profile load via initialize_menu
