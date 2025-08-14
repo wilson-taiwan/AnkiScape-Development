@@ -4,7 +4,7 @@ def get_exp_to_next_level(player_data, EXP_TABLE):
     current_level = player_data["mining_level"]
     if current_level >= 99:
         return 0
-    return EXP_TABLE[current_level] - player_data["total_exp"]
+    return EXP_TABLE[current_level] - player_data["mining_exp"]
 
 def calculate_new_level(skill_exp, current_level, EXP_TABLE):
     """
