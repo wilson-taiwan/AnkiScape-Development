@@ -45,6 +45,7 @@ from .ui import (
     refresh_skill_availability,
 )
 from . import ui
+from .deck_injection_pure import DeckBrowserContent as _DBC, ankiscape_button_html, inject_into_deck_browser_content
 from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
 
 global card_turned, exp_awarded, answer_shown
@@ -54,6 +55,19 @@ card_turned = False
 exp_awarded = False
 
 current_skill = "None"
+
+# --- Debug logging ---
+DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
+
+def debug_log(msg: str) -> None:
+    try:
+        with open(DEBUG_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"{datetime.datetime.now().isoformat()} | {msg}\n")
+    except Exception:
+        pass
+
+# Guard to avoid duplicate registrations
+_ANKISCAPE_HOOKS_REGISTERED = False
 
 def show_review_popup():
     ui.show_review_popup()
@@ -217,6 +231,13 @@ def _set_value(key: str, value):
 
 def initialize_menu():
     ui.create_menu(on_main_menu=_on_main_menu)
+    # Refresh Deck Browser so injected content becomes visible after login
+    try:
+        debug_log("initialize_menu: forcing deck browser refresh")
+        _force_deck_browser_refresh()
+    except Exception:
+        debug_log("initialize_menu: deck browser refresh failed")
+        pass
 
 
 # Main functionality
@@ -405,6 +426,7 @@ addHook("profileLoaded", load_player_data)
 addHook("profileLoaded", initialize_exp_popup)
 addHook("profileLoaded", initialize_skill)
 addHook("profileLoaded", initialize_menu)
+addHook("profileLoaded", lambda: _register_deck_browser_button())
 
 gui_hooks.reviewer_did_show_question.append(on_card_did_show)
 gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
@@ -413,3 +435,246 @@ gui_hooks.reviewer_did_show_answer.append(on_show_answer)
 Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
 
 # Menu is created on profile load via initialize_menu
+
+# --- Deck Browser bottom button integration ---
+
+def _register_deck_browser_button():
+    """Inject an 'AnkiScape' button near the bottom links and wire it to open the menu."""
+    try:
+        from aqt import gui_hooks as _hooks  # type: ignore
+    except Exception:
+        return
+    global _ANKISCAPE_HOOKS_REGISTERED
+    if _ANKISCAPE_HOOKS_REGISTERED:
+        debug_log("_register_deck_browser_button: hooks already registered; skipping")
+        return
+    try:
+        debug_log("_register_deck_browser_button: registering hooks; available: " + ", ".join([n for n in dir(_hooks) if not n.startswith("__")][:40]))
+    except Exception:
+        debug_log("_register_deck_browser_button: registering hooks (could not list attrs)")
+
+    def _add_button(deck_browser, content):  # type: ignore[no-redef]
+        debug_log("_add_button: called")
+        # Use pure injection logic for determinism and testability
+        try:
+            # Diagnostics: log which fields exist and sample lengths
+            try:
+                has_links = hasattr(content, "links") and isinstance(getattr(content, "links"), str)
+                has_stats = hasattr(content, "stats") and isinstance(getattr(content, "stats"), str)
+                has_tree = hasattr(content, "tree") and isinstance(getattr(content, "tree"), str)
+                debug_log(f"_add_button: fields links={has_links} stats={has_stats} tree={has_tree}")
+            except Exception:
+                debug_log("_add_button: field introspection failed")
+            db_content = _DBC(
+                links=getattr(content, "links", None),
+                stats=getattr(content, "stats", None),
+                tree=getattr(content, "tree", None),
+            )
+            before_links, before_stats, before_tree = db_content.links, db_content.stats, db_content.tree
+            db_content = inject_into_deck_browser_content(db_content)
+            if db_content.links != before_links:
+                if hasattr(content, "links"):
+                    content.links = db_content.links
+                else:
+                    # Links not exposed; do nothing here to avoid overlapping Heatmap
+                    debug_log("_add_button: links attr missing; skipping to avoid overlap")
+                debug_log("_add_button: injected into links")
+            elif db_content.stats != before_stats or db_content.tree != before_tree:
+                # We no longer inject into stats/tree by design
+                debug_log("_add_button: no injection (stats/tree avoided)")
+            else:
+                debug_log("_add_button: already present; no injection")
+        except Exception as e:
+            debug_log(f"_add_button: error {e}")
+
+    def _on_js_message(handled, message, context):  # type: ignore[no-redef]
+        debug_log(f"_on_js_message: {message}")
+        if isinstance(message, str) and message.startswith("ankiscape_log:"):
+            debug_log(f"js: {message[len('ankiscape_log:'):]}")
+            return handled
+        if message == "ankiscape_open_menu":
+            _on_main_menu()
+            return (True, None)
+        return handled
+
+    def _did_render(deck_browser):  # type: ignore[no-redef]
+        try:
+            js = r"""
+            (function(){
+                try {
+                    if (document.getElementById('ankiscape-btn')) { return; }
+                    function makeBtn(){
+                        var a = document.createElement('a');
+                        a.id = 'ankiscape-btn';
+                        a.href = '#';
+                        a.style.marginLeft = '8px';
+                        a.style.padding = '4px 10px';
+                        a.style.border = '1px solid #ccc';
+                        a.style.borderRadius = '6px';
+                        a.style.textDecoration = 'none';
+                        a.textContent = 'AnkiScape';
+                        a.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                        return a;
+                    }
+
+                    // 1) Try bottom actions row: insert after last known action
+                    var elems = Array.from(document.querySelectorAll('a,button'));
+                    var actions = elems.filter(function(e){
+                        var t = (e.textContent || '').trim();
+                        return /(Get Shared|Create Deck|Import)/i.test(t);
+                    });
+                    if (actions.length) {
+                        var last = actions[actions.length - 1];
+                        var btn = makeBtn();
+                        if (last.parentElement) {
+                            if (last.nextSibling) {
+                                last.parentElement.insertBefore(btn, last.nextSibling);
+                            } else {
+                                last.parentElement.appendChild(btn);
+                            }
+                            try { pycmd('ankiscape_log:after_last_action(' + actions.length + ')'); } catch(e){}
+                            return;
+                        }
+                    }
+
+                    // 2) Try top nav: find Decks/Add/Browse/Stats/Sync anchors and append next to Sync
+                    var topAnchors = elems.filter(function(e){
+                        var t = (e.textContent || '').trim();
+                        return /(Decks|Add|Browse|Stats|Sync)/i.test(t);
+                    });
+                    if (topAnchors.length) {
+                        // Find the rightmost among these
+                        var rightmost = topAnchors[topAnchors.length - 1];
+                        var btn2 = makeBtn();
+                        if (rightmost.parentElement) {
+                            if (rightmost.nextSibling) {
+                                rightmost.parentElement.insertBefore(btn2, rightmost.nextSibling);
+                            } else {
+                                rightmost.parentElement.appendChild(btn2);
+                            }
+                            try { pycmd('ankiscape_log:inserted_topnav(' + topAnchors.length + ')'); } catch(e){}
+                            return;
+                        }
+                    }
+
+                    // 3) Fallback: try known footer selectors
+                    var footer = document.querySelector('.links') || document.querySelector('#links') || null;
+                    if (footer) {
+                        footer.appendChild(makeBtn());
+                        try { pycmd('ankiscape_log:inserted_selector'); } catch(e){}
+                        return;
+                    }
+
+                    // 4) Last resort: floating edge-aligned pill (bottom-right)
+                    var wrap = document.getElementById('ankiscape-float');
+                    if (!wrap) {
+                        wrap = document.createElement('div');
+                        wrap.id = 'ankiscape-float';
+                        wrap.style.position = 'fixed';
+                        wrap.style.right = '16px';
+                        wrap.style.bottom = '16px';
+                        wrap.style.zIndex = '9999';
+                        document.body.appendChild(wrap);
+                    }
+                    wrap.appendChild(makeBtn());
+                    try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
+                } catch (e) {
+                    try { pycmd('ankiscape_log:js_error'); } catch(_){}
+                }
+            })();
+            """
+            deck_browser.web.eval(js)
+            debug_log("_did_render: eval injected fallback button if absent")
+        except Exception:
+            debug_log("_did_render: eval failed")
+
+    # Register hooks: remove then append (avoid membership tests that may fail)
+    try:
+        try:
+            _hooks.deck_browser_will_render_content.remove(_add_button)
+        except Exception:
+            pass
+        _hooks.deck_browser_will_render_content.append(_add_button)
+        debug_log("registered: deck_browser_will_render_content")
+    except Exception as e:
+        debug_log(f"register failed: deck_browser_will_render_content: {e}")
+    try:
+        try:
+            _hooks.deck_browser_did_render.remove(_did_render)
+        except Exception:
+            pass
+        _hooks.deck_browser_did_render.append(_did_render)
+        debug_log("registered: deck_browser_did_render")
+    except Exception as e:
+        debug_log(f"register failed: deck_browser_did_render: {e}")
+    try:
+        try:
+            _hooks.webview_did_receive_js_message.remove(_on_js_message)
+        except Exception:
+            pass
+        _hooks.webview_did_receive_js_message.append(_on_js_message)
+        debug_log("registered: webview_did_receive_js_message")
+    except Exception as e:
+        debug_log(f"register failed: webview_did_receive_js_message: {e}")
+
+    # Add to the deck options (gear) menu as an additional entry point
+    def _will_show_options_menu(menu, deck_id):  # type: ignore[no-redef]
+        try:
+            act = menu.addAction("AnkiScape")
+            act.triggered.connect(lambda: _on_main_menu())
+            debug_log("will_show_options_menu: added action")
+        except Exception:
+            debug_log("will_show_options_menu: failed to add action")
+    try:
+        try:
+            _hooks.deck_browser_will_show_options_menu.remove(_will_show_options_menu)
+        except Exception:
+            pass
+        _hooks.deck_browser_will_show_options_menu.append(_will_show_options_menu)
+        debug_log("registered: deck_browser_will_show_options_menu")
+    except Exception as e:
+        debug_log(f"register failed: deck_browser_will_show_options_menu: {e}")
+
+    # Legacy addHook fallback for older environments (name: deckBrowserWillRenderContent)
+    try:
+        def _legacy_add_button(content):
+            debug_log("_legacy_add_button: called")
+            try:
+                db_content = _DBC(stats=getattr(content, "stats", None), tree=getattr(content, "tree", None))
+                before_stats, before_tree = db_content.stats, db_content.tree
+                db_content = inject_into_deck_browser_content(db_content)
+                if db_content.stats != before_stats:
+                    content.stats = db_content.stats
+                    debug_log("_legacy_add_button: injected into stats")
+                elif db_content.tree != before_tree:
+                    content.tree = db_content.tree
+                    debug_log("_legacy_add_button: injected into tree")
+                else:
+                    debug_log("_legacy_add_button: already present; no injection")
+            except Exception as e:
+                debug_log(f"_legacy_add_button: error {e}")
+        addHook("deckBrowserWillRenderContent", _legacy_add_button)
+        debug_log("legacy registered: deckBrowserWillRenderContent")
+    except Exception as e:
+        debug_log(f"legacy register failed: deckBrowserWillRenderContent: {e}")
+
+    _ANKISCAPE_HOOKS_REGISTERED = True
+
+
+def _force_deck_browser_refresh():
+    """Trigger a Deck Browser rerender so injected content becomes visible immediately."""
+    try:
+        db = getattr(mw, "deckBrowser", None)
+        if db is None:
+            debug_log("force_refresh: no deckBrowser present")
+            return
+        # Prefer refresh when available, otherwise renderPage
+        if hasattr(db, "refresh"):
+            debug_log("force_refresh: calling deckBrowser.refresh()")
+            db.refresh()
+        elif hasattr(db, "renderPage"):
+            debug_log("force_refresh: calling deckBrowser.renderPage()")
+            db.renderPage()
+    except Exception:
+        debug_log("force_refresh: failed to refresh")
+        pass

@@ -1,0 +1,115 @@
+2025-08-15T14:59:57.944006 | initialize_menu: forcing deck browser refresh
+2025-08-15T14:59:57.944122 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T14:59:57.946882 | _register_deck_browser_button: registering hooks
+2025-08-15T14:59:57.946993 | register failed: deck_browser_will_render_content
+2025-08-15T14:59:57.947032 | register failed: deck_browser_did_render
+2025-08-15T14:59:57.947067 | register failed: webview_did_receive_js_message
+2025-08-15T14:59:57.947099 | register failed: deck_browser_will_show_options_menu
+2025-08-15T15:00:36.695900 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:00:36.696105 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:00:36.698935 | _register_deck_browser_button: registering hooks
+2025-08-15T15:00:36.699051 | register failed: deck_browser_will_render_content
+2025-08-15T15:00:36.699098 | register failed: deck_browser_did_render
+2025-08-15T15:00:36.699140 | register failed: webview_did_receive_js_message
+2025-08-15T15:00:36.699179 | register failed: deck_browser_will_show_options_menu
+2025-08-15T15:04:46.717432 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:04:46.717655 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:04:46.720193 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:04:46.720299 | registered: deck_browser_will_render_content
+2025-08-15T15:04:46.720345 | registered: deck_browser_did_render
+2025-08-15T15:04:46.720384 | registered: webview_did_receive_js_message
+2025-08-15T15:04:46.720421 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:04:46.720460 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:04:46.734998 | _add_button: called
+2025-08-15T15:04:46.735140 | _add_button: injected into stats
+2025-08-15T15:04:46.736352 | _did_render: eval injected fallback button if absent
+2025-08-15T15:04:50.102502 | _on_js_message: ankiscape_open_menu
+2025-08-15T15:07:36.882951 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:07:36.883440 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:07:36.886138 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:07:36.886255 | registered: deck_browser_will_render_content
+2025-08-15T15:07:36.886304 | registered: deck_browser_did_render
+2025-08-15T15:07:36.886344 | registered: webview_did_receive_js_message
+2025-08-15T15:07:36.886380 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:07:36.886420 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:07:36.901596 | _add_button: called
+2025-08-15T15:07:36.901736 | _add_button: injected into tree
+2025-08-15T15:07:36.902943 | _did_render: eval injected fallback button if absent
+2025-08-15T15:07:40.867488 | _on_js_message: ankiscape_open_menu
+2025-08-15T15:08:51.164575 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:08:51.164790 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:08:51.167525 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:08:51.167635 | registered: deck_browser_will_render_content
+2025-08-15T15:08:51.167688 | registered: deck_browser_did_render
+2025-08-15T15:08:51.167734 | registered: webview_did_receive_js_message
+2025-08-15T15:08:51.167777 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:08:51.167822 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:08:51.182450 | _add_button: called
+2025-08-15T15:08:51.182602 | _add_button: injected into tree
+2025-08-15T15:08:51.183776 | _did_render: eval injected fallback button if absent
+2025-08-15T15:13:43.232844 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:13:43.233181 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:13:43.235907 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:13:43.236028 | registered: deck_browser_will_render_content
+2025-08-15T15:13:43.236084 | registered: deck_browser_did_render
+2025-08-15T15:13:43.236133 | registered: webview_did_receive_js_message
+2025-08-15T15:13:43.236180 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:13:43.236227 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:13:43.250381 | _add_button: called
+2025-08-15T15:13:43.250528 | _add_button: already present; no injection
+2025-08-15T15:13:43.251708 | _did_render: eval injected fallback button if absent
+2025-08-15T15:14:34.077133 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:14:34.077369 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:14:34.079950 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:14:34.080087 | registered: deck_browser_will_render_content
+2025-08-15T15:14:34.080142 | registered: deck_browser_did_render
+2025-08-15T15:14:34.080193 | registered: webview_did_receive_js_message
+2025-08-15T15:14:34.080240 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:14:34.080287 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:14:34.094385 | _add_button: called
+2025-08-15T15:14:34.094512 | _add_button: already present; no injection
+2025-08-15T15:14:34.095758 | _did_render: eval injected fallback button if absent
+2025-08-15T15:17:21.108013 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:17:21.108926 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:17:21.111717 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:17:21.111863 | registered: deck_browser_will_render_content
+2025-08-15T15:17:21.111937 | registered: deck_browser_did_render
+2025-08-15T15:17:21.111989 | registered: webview_did_receive_js_message
+2025-08-15T15:17:21.112037 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:17:21.112087 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:17:21.126298 | _add_button: called
+2025-08-15T15:17:21.126431 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:17:21.126500 | _add_button: already present; no injection
+2025-08-15T15:17:21.127681 | _did_render: eval injected fallback button if absent
+2025-08-15T15:17:21.276069 | _on_js_message: ankiscape_log:no_footer
+2025-08-15T15:17:21.276279 | js: no_footer
+2025-08-15T15:19:33.164063 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:19:33.164324 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:19:33.167098 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:19:33.167216 | registered: deck_browser_will_render_content
+2025-08-15T15:19:33.167275 | registered: deck_browser_did_render
+2025-08-15T15:19:33.167330 | registered: webview_did_receive_js_message
+2025-08-15T15:19:33.167483 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:19:33.167603 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:19:33.181864 | _add_button: called
+2025-08-15T15:19:33.182006 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:19:33.182071 | _add_button: already present; no injection
+2025-08-15T15:19:33.183325 | _did_render: eval injected fallback button if absent
+2025-08-15T15:19:33.325596 | _on_js_message: ankiscape_log:no_footer
+2025-08-15T15:19:33.326300 | js: no_footer
+2025-08-15T15:21:49.381333 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:21:49.382285 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:21:49.384998 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:21:49.385144 | registered: deck_browser_will_render_content
+2025-08-15T15:21:49.385222 | registered: deck_browser_did_render
+2025-08-15T15:21:49.385281 | registered: webview_did_receive_js_message
+2025-08-15T15:21:49.385338 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:21:49.385391 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:21:49.399767 | _add_button: called
+2025-08-15T15:21:49.399931 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:21:49.399998 | _add_button: already present; no injection
+2025-08-15T15:21:49.401185 | _did_render: eval injected fallback button if absent
+2025-08-15T15:21:49.541749 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:21:49.541988 | js: inserted_floating
+2025-08-15T15:21:54.199990 | _on_js_message: ankiscape_open_menu
+2025-08-15T15:22:50.148335 | _on_js_message: ankiscape_open_menu
