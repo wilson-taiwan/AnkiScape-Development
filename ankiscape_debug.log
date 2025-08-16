@@ -747,3 +747,407 @@
 2025-08-16T02:32:00.650980 | js: overview_floating_inserted
 2025-08-16T02:32:02.208011 | _on_js_message: ankiscape_open_menu
 2025-08-16T02:32:09.007257 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:23:38.477929 | initialize_menu: forcing deck browser refresh
+2025-08-16T13:23:38.478462 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T13:23:38.482461 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-16T13:23:38.482554 | registered: deck_browser_will_render_content
+2025-08-16T13:23:38.482657 | registered: deck_browser_did_render
+2025-08-16T13:23:38.482721 | registered: webview_did_receive_js_message
+2025-08-16T13:23:38.482768 | registered: deck_browser_will_show_options_menu
+2025-08-16T13:23:38.482816 | legacy registered: deckBrowserWillRenderContent
+2025-08-16T13:23:38.482865 | registered: overview_did_refresh
+2025-08-16T13:23:38.482907 | legacy registered: overviewWillRender
+2025-08-16T13:23:38.503937 | _add_button: called
+2025-08-16T13:23:38.504045 | _add_button: fields links=False stats=True tree=True
+2025-08-16T13:23:38.504102 | _add_button: already present; no injection
+2025-08-16T13:23:38.505825 | _did_render: eval injected fallback button if absent
+2025-08-16T13:23:38.668011 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T13:23:38.668126 | js: inserted_floating
+2025-08-16T13:23:41.583709 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:23:48.946359 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:23:53.497218 | inject_reviewer_floating_button: eval
+2025-08-16T13:23:53.498247 | inject_overview_floating_button: eval
+2025-08-16T13:23:54.362358 | inject_reviewer_floating_button: eval
+2025-08-16T13:23:54.363394 | inject_overview_floating_button: eval
+2025-08-16T13:23:55.664490 | inject_reviewer_floating_button: eval
+2025-08-16T13:23:55.665671 | inject_overview_floating_button: eval
+2025-08-16T13:23:57.047181 | inject_reviewer_floating_button: disabled; removed
+2025-08-16T13:23:57.047989 | inject_overview_floating_button: disabled; removed
+2025-08-16T13:23:57.529271 | inject_reviewer_floating_button: eval
+2025-08-16T13:23:57.530165 | inject_overview_floating_button: eval
+2025-08-16T13:23:59.506149 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:23:59.506645 | js: review_floating_inserted
+2025-08-16T13:23:59.506821 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:23:59.506880 | js: overview_floating_inserted
+2025-08-16T13:23:59.506964 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:23:59.507015 | js: review_floating_inserted
+2025-08-16T13:23:59.507089 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:23:59.507137 | js: overview_floating_inserted
+2025-08-16T13:23:59.507207 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:23:59.507253 | js: review_floating_inserted
+2025-08-16T13:23:59.507320 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:23:59.507365 | js: overview_floating_inserted
+2025-08-16T13:23:59.507496 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:23:59.507540 | js: review_floating_inserted
+2025-08-16T13:23:59.507606 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:23:59.507650 | js: overview_floating_inserted
+2025-08-16T13:30:09.870446 | initialize_menu: forcing deck browser refresh
+2025-08-16T13:30:09.870696 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T13:30:09.873119 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-16T13:30:09.873228 | registered: deck_browser_will_render_content
+2025-08-16T13:30:09.873281 | registered: deck_browser_did_render
+2025-08-16T13:30:09.873330 | registered: webview_did_receive_js_message
+2025-08-16T13:30:09.873408 | registered: deck_browser_will_show_options_menu
+2025-08-16T13:30:09.873478 | legacy registered: deckBrowserWillRenderContent
+2025-08-16T13:30:09.873545 | registered: overview_did_refresh
+2025-08-16T13:30:09.873602 | legacy registered: overviewWillRender
+2025-08-16T13:30:09.874040 | _add_button: called
+2025-08-16T13:30:09.874097 | _add_button: fields links=False stats=True tree=True
+2025-08-16T13:30:09.874147 | _add_button: already present; no injection
+2025-08-16T13:30:09.875221 | _did_render: eval injected fallback button if absent
+2025-08-16T13:30:10.037374 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T13:30:10.037540 | js: inserted_floating
+2025-08-16T13:30:12.328864 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:34:33.950411 | initialize_menu: forcing deck browser refresh
+2025-08-16T13:34:33.950849 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T13:34:33.953407 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-16T13:34:33.953517 | registered: deck_browser_will_render_content
+2025-08-16T13:34:33.953575 | registered: deck_browser_did_render
+2025-08-16T13:34:33.953629 | registered: webview_did_receive_js_message
+2025-08-16T13:34:33.953679 | registered: deck_browser_will_show_options_menu
+2025-08-16T13:34:33.953729 | legacy registered: deckBrowserWillRenderContent
+2025-08-16T13:34:33.953839 | registered: overview_did_refresh
+2025-08-16T13:34:33.953912 | legacy registered: overviewWillRender
+2025-08-16T13:34:33.954381 | _add_button: called
+2025-08-16T13:34:33.954440 | _add_button: fields links=False stats=True tree=True
+2025-08-16T13:34:33.954493 | _add_button: already present; no injection
+2025-08-16T13:34:33.955529 | _did_render: eval injected fallback button if absent
+2025-08-16T13:34:34.105540 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T13:34:34.105782 | js: inserted_floating
+2025-08-16T13:34:37.492230 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:34:41.740830 | inject_reviewer_floating_button: eval
+2025-08-16T13:34:41.741901 | inject_overview_floating_button: eval
+2025-08-16T13:34:42.407854 | inject_reviewer_floating_button: eval
+2025-08-16T13:34:42.409047 | inject_overview_floating_button: eval
+2025-08-16T13:34:43.058319 | inject_reviewer_floating_button: eval
+2025-08-16T13:34:43.059674 | inject_overview_floating_button: eval
+2025-08-16T13:34:43.858766 | inject_reviewer_floating_button: disabled; removed
+2025-08-16T13:34:43.859812 | inject_overview_floating_button: disabled; removed
+2025-08-16T13:34:44.242255 | inject_reviewer_floating_button: eval
+2025-08-16T13:34:44.243624 | inject_overview_floating_button: eval
+2025-08-16T13:34:45.489872 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:34:45.490185 | js: review_floating_inserted
+2025-08-16T13:34:45.490363 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:34:45.490423 | js: overview_floating_inserted
+2025-08-16T13:34:45.490616 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:34:45.490733 | js: review_floating_inserted
+2025-08-16T13:34:45.490875 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:34:45.490949 | js: overview_floating_inserted
+2025-08-16T13:34:45.491060 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:34:45.491180 | js: review_floating_inserted
+2025-08-16T13:34:45.491254 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:34:45.491293 | js: overview_floating_inserted
+2025-08-16T13:34:45.491447 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:34:45.491491 | js: review_floating_inserted
+2025-08-16T13:34:45.491562 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:34:45.491602 | js: overview_floating_inserted
+2025-08-16T13:34:46.525678 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:01.152565 | initialize_menu: forcing deck browser refresh
+2025-08-16T13:40:01.153014 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T13:40:01.155668 | registered: deck_browser_will_render_content
+2025-08-16T13:40:01.155784 | registered: deck_browser_did_render
+2025-08-16T13:40:01.155828 | registered: webview_did_receive_js_message
+2025-08-16T13:40:01.171244 | _add_button: called
+2025-08-16T13:40:01.171394 | _add_button: already present; no injection
+2025-08-16T13:40:01.172911 | _did_render: eval injected fallback button if absent
+2025-08-16T13:40:01.349235 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T13:40:01.349872 | js: inserted_floating
+2025-08-16T13:40:02.790574 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:04.738898 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:05.456188 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:06.039564 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:06.355650 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:06.639512 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:07.188012 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:07.539065 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:13.959114 | inject_reviewer_floating_button: eval
+2025-08-16T13:40:13.960283 | inject_overview_floating_button: eval
+2025-08-16T13:40:13.964046 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:40:13.964260 | js: review_floating_inserted
+2025-08-16T13:40:13.964576 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:40:13.964686 | js: overview_floating_inserted
+2025-08-16T13:40:14.903730 | inject_reviewer_floating_button: disabled; removed
+2025-08-16T13:40:14.904351 | inject_overview_floating_button: disabled; removed
+2025-08-16T13:40:15.239584 | inject_reviewer_floating_button: eval
+2025-08-16T13:40:15.240604 | inject_overview_floating_button: eval
+2025-08-16T13:40:15.245796 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T13:40:15.246064 | js: review_floating_inserted
+2025-08-16T13:40:15.246371 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T13:40:15.246485 | js: overview_floating_inserted
+2025-08-16T13:40:18.705252 | _on_js_message: ankiscape_open_menu
+2025-08-16T13:40:19.156125 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:07:58.695899 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:07:58.696230 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:07:58.699993 | registered: deck_browser_will_render_content
+2025-08-16T14:07:58.700111 | registered: deck_browser_did_render
+2025-08-16T14:07:58.700157 | registered: webview_did_receive_js_message
+2025-08-16T14:07:58.733738 | _add_button: called
+2025-08-16T14:07:58.733851 | _add_button: already present; no injection
+2025-08-16T14:07:58.735811 | _did_render: eval injected fallback button if absent
+2025-08-16T14:07:58.885905 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:07:58.886140 | js: inserted_floating
+2025-08-16T14:08:00.893745 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:08:01.443028 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:08:01.740426 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:00.375377 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:14:00.375717 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:14:00.379868 | registered: deck_browser_will_render_content
+2025-08-16T14:14:00.379971 | registered: deck_browser_did_render
+2025-08-16T14:14:00.380062 | registered: webview_did_receive_js_message
+2025-08-16T14:14:00.408738 | _add_button: called
+2025-08-16T14:14:00.408831 | _add_button: already present; no injection
+2025-08-16T14:14:00.410233 | _did_render: eval injected fallback button if absent
+2025-08-16T14:14:00.590614 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:14:00.590718 | js: inserted_floating
+2025-08-16T14:14:02.233821 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:03.847783 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:05.198090 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:05.498086 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:05.947646 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:17.032011 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:18.447176 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:14:24.733459 | inject_reviewer_floating_button: eval
+2025-08-16T14:14:24.734509 | inject_overview_floating_button: eval
+2025-08-16T14:14:24.738987 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:14:24.739266 | js: review_floating_inserted
+2025-08-16T14:14:24.739583 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:14:24.739737 | js: overview_floating_inserted
+2025-08-16T14:14:27.147618 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:25.954284 | initialize_menu: creating AnkiScape menu
+2025-08-16T14:16:25.954719 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:16:25.954776 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:16:25.957364 | registered: deck_browser_will_render_content
+2025-08-16T14:16:25.957488 | registered: deck_browser_did_render
+2025-08-16T14:16:25.957544 | registered: webview_did_receive_js_message
+2025-08-16T14:16:25.972058 | _add_button: called
+2025-08-16T14:16:25.972193 | _add_button: already present; no injection
+2025-08-16T14:16:25.973804 | _did_render: eval injected fallback button if absent
+2025-08-16T14:16:26.141112 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:16:26.141313 | js: inserted_floating
+2025-08-16T14:16:28.148276 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:28.149266 | js: click_deckbrowser
+2025-08-16T14:16:28.149847 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:42.397622 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:42.398852 | js: click_deckbrowser
+2025-08-16T14:16:42.399563 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:42.713656 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:42.714266 | js: click_deckbrowser
+2025-08-16T14:16:42.714734 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:43.062745 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:43.063730 | js: click_deckbrowser
+2025-08-16T14:16:43.064260 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:43.397535 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:43.398877 | js: click_deckbrowser
+2025-08-16T14:16:43.399604 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:43.747352 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:16:43.748319 | js: click_deckbrowser
+2025-08-16T14:16:43.749120 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:49.834140 | inject_reviewer_floating_button: eval
+2025-08-16T14:16:49.835241 | inject_overview_floating_button: eval
+2025-08-16T14:16:49.839880 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:16:49.840143 | js: review_floating_inserted
+2025-08-16T14:16:49.840482 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:16:49.840605 | js: overview_floating_inserted
+2025-08-16T14:16:51.063789 | inject_reviewer_floating_button: disabled; removed
+2025-08-16T14:16:51.064539 | inject_overview_floating_button: disabled; removed
+2025-08-16T14:16:51.447337 | inject_reviewer_floating_button: eval
+2025-08-16T14:16:51.448434 | inject_overview_floating_button: eval
+2025-08-16T14:16:51.452797 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:16:51.453338 | js: review_floating_inserted
+2025-08-16T14:16:51.453689 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:16:51.453838 | js: overview_floating_inserted
+2025-08-16T14:16:53.831419 | _on_js_message: ankiscape_log:click_reviewer
+2025-08-16T14:16:53.832831 | js: click_reviewer
+2025-08-16T14:16:53.833465 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:54.207968 | _on_js_message: ankiscape_log:click_reviewer
+2025-08-16T14:16:54.208542 | js: click_reviewer
+2025-08-16T14:16:54.213094 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:54.462681 | _on_js_message: ankiscape_log:click_reviewer
+2025-08-16T14:16:54.463251 | js: click_reviewer
+2025-08-16T14:16:54.463552 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:54.731824 | _on_js_message: ankiscape_log:click_reviewer
+2025-08-16T14:16:54.732840 | js: click_reviewer
+2025-08-16T14:16:54.733879 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:16:54.964214 | _on_js_message: ankiscape_log:click_reviewer
+2025-08-16T14:16:54.965016 | js: click_reviewer
+2025-08-16T14:16:54.965539 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:20:16.082929 | initialize_menu: creating AnkiScape menu
+2025-08-16T14:20:16.083517 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:20:16.083588 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:20:16.086251 | registered: deck_browser_will_render_content
+2025-08-16T14:20:16.086423 | registered: deck_browser_did_render
+2025-08-16T14:20:16.086494 | registered: webview_did_receive_js_message
+2025-08-16T14:20:16.101266 | _add_button: called
+2025-08-16T14:20:16.101434 | _add_button: already present; no injection
+2025-08-16T14:20:16.103013 | _did_render: eval injected fallback button if absent
+2025-08-16T14:20:16.258006 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:20:16.258287 | js: inserted_floating
+2025-08-16T14:20:17.964994 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:20:17.966065 | js: click_deckbrowser
+2025-08-16T14:20:17.966734 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:20:17.967012 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:20:17.967240 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:20:21.548108 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:20:21.549283 | js: click_deckbrowser
+2025-08-16T14:20:21.550037 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:20:21.550412 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:20:21.550776 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:41.199761 | initialize_menu: creating AnkiScape menu
+2025-08-16T14:21:41.200251 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:21:41.200318 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:21:41.202811 | registered: deck_browser_will_render_content
+2025-08-16T14:21:41.202919 | registered: deck_browser_did_render
+2025-08-16T14:21:41.202975 | registered: webview_did_receive_js_message
+2025-08-16T14:21:41.217847 | _add_button: called
+2025-08-16T14:21:41.218002 | _add_button: already present; no injection
+2025-08-16T14:21:41.219722 | _did_render: eval injected fallback button if absent
+2025-08-16T14:21:41.360288 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:21:41.360645 | js: inserted_floating
+2025-08-16T14:21:42.965536 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:42.966662 | js: click_deckbrowser
+2025-08-16T14:21:42.967213 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:42.967465 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:42.967671 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:45.264163 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:45.265011 | js: click_deckbrowser
+2025-08-16T14:21:45.265320 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:45.265529 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:45.265832 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:47.747157 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:47.748197 | js: click_deckbrowser
+2025-08-16T14:21:47.748828 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:47.749187 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:47.749380 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:47.997664 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:47.999492 | js: click_deckbrowser
+2025-08-16T14:21:48.000246 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:48.000512 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:48.000715 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:48.298221 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:48.299419 | js: click_deckbrowser
+2025-08-16T14:21:48.299996 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:48.300241 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:48.300446 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:48.581309 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:48.582671 | js: click_deckbrowser
+2025-08-16T14:21:48.583144 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:48.583348 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:48.583517 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:21:48.813873 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:21:48.814830 | js: click_deckbrowser
+2025-08-16T14:21:48.815334 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:21:48.815707 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:21:48.815940 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:08.848544 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:08.849720 | js: click_deckbrowser
+2025-08-16T14:22:08.850459 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:08.850881 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:08.851101 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:09.063697 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:09.064135 | js: click_deckbrowser
+2025-08-16T14:22:09.064730 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:09.065038 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:09.065263 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:09.264182 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:09.264957 | js: click_deckbrowser
+2025-08-16T14:22:09.265309 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:09.265516 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:09.265671 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:09.463891 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:09.464350 | js: click_deckbrowser
+2025-08-16T14:22:09.464962 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:09.465286 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:09.465485 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:09.680880 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:09.681881 | js: click_deckbrowser
+2025-08-16T14:22:09.682295 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:09.682555 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:09.682778 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:09.864375 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:09.864774 | js: click_deckbrowser
+2025-08-16T14:22:09.865230 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:09.865435 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:09.865611 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:10.063769 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:10.064320 | js: click_deckbrowser
+2025-08-16T14:22:10.064774 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:10.064947 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:10.065068 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:10.381181 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:10.382092 | js: click_deckbrowser
+2025-08-16T14:22:10.382566 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:10.382841 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:10.383001 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:10.731864 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:10.733400 | js: click_deckbrowser
+2025-08-16T14:22:10.734124 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:10.734375 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:10.734531 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:22:10.914305 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:22:10.915131 | js: click_deckbrowser
+2025-08-16T14:22:10.915686 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:22:10.915854 | injectors.bridge: opening via __init__._on_main_menu
+2025-08-16T14:22:10.915982 | injectors.bridge: failed to open: 'method-wrapper' object has no attribute '_on_main_menu'
+2025-08-16T14:29:24.920511 | initialize_menu: creating AnkiScape menu
+2025-08-16T14:29:24.921123 | initialize_menu: forcing deck browser refresh
+2025-08-16T14:29:24.921177 | force_refresh: calling deckBrowser.refresh()
+2025-08-16T14:29:24.923780 | registered: deck_browser_will_render_content
+2025-08-16T14:29:24.923862 | registered: deck_browser_did_render
+2025-08-16T14:29:24.923906 | registered: webview_did_receive_js_message
+2025-08-16T14:29:24.940958 | _add_button: called
+2025-08-16T14:29:24.941095 | _add_button: already present; no injection
+2025-08-16T14:29:24.942675 | _did_render: eval injected fallback button if absent
+2025-08-16T14:29:25.097037 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-16T14:29:25.097250 | js: inserted_floating
+2025-08-16T14:29:26.465707 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:29:26.466361 | js: click_deckbrowser
+2025-08-16T14:29:26.466931 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:29:26.467133 | injectors.bridge: opening via package._on_main_menu
+2025-08-16T14:29:26.467347 | injectors.bridge: scheduled _on_main_menu with QTimer
+2025-08-16T14:29:26.467653 | ui.show_main_menu: enter
+2025-08-16T14:29:26.871794 | ui.show_main_menu: about to exec
+2025-08-16T14:29:28.554113 | ui.show_main_menu: dialog closed
+2025-08-16T14:29:30.248300 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:29:30.249288 | js: click_deckbrowser
+2025-08-16T14:29:30.249843 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:29:30.250076 | injectors.bridge: opening via package._on_main_menu
+2025-08-16T14:29:30.250312 | injectors.bridge: scheduled _on_main_menu with QTimer
+2025-08-16T14:29:30.250677 | ui.show_main_menu: enter
+2025-08-16T14:29:30.643490 | ui.show_main_menu: about to exec
+2025-08-16T14:29:33.382693 | inject_reviewer_floating_button: eval
+2025-08-16T14:29:33.383692 | inject_overview_floating_button: eval
+2025-08-16T14:29:33.387895 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:29:33.388135 | js: review_floating_inserted
+2025-08-16T14:29:33.388422 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:29:33.388647 | js: overview_floating_inserted
+2025-08-16T14:29:33.998520 | inject_reviewer_floating_button: eval
+2025-08-16T14:29:33.999648 | inject_overview_floating_button: eval
+2025-08-16T14:29:34.003927 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:29:34.004206 | js: review_floating_inserted
+2025-08-16T14:29:34.004494 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:29:34.004615 | js: overview_floating_inserted
+2025-08-16T14:29:34.615587 | inject_reviewer_floating_button: eval
+2025-08-16T14:29:34.616656 | inject_overview_floating_button: eval
+2025-08-16T14:29:34.620802 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-16T14:29:34.621100 | js: review_floating_inserted
+2025-08-16T14:29:34.621448 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-16T14:29:34.621599 | js: overview_floating_inserted
+2025-08-16T14:29:36.024615 | ui.show_main_menu: dialog closed
+2025-08-16T14:29:36.965762 | _on_js_message: ankiscape_log:click_deckbrowser
+2025-08-16T14:29:36.967007 | js: click_deckbrowser
+2025-08-16T14:29:36.967628 | _on_js_message: ankiscape_open_menu
+2025-08-16T14:29:36.967909 | injectors.bridge: opening via package._on_main_menu
+2025-08-16T14:29:36.968222 | injectors.bridge: scheduled _on_main_menu with QTimer
+2025-08-16T14:29:36.968663 | ui.show_main_menu: enter
+2025-08-16T14:29:37.352459 | ui.show_main_menu: about to exec
+2025-08-16T14:29:38.568133 | ui.show_main_menu: dialog closed

@@ -2,6 +2,7 @@
 
 import os
 from typing import Optional
+import datetime
 
 try:
     from aqt import mw  # type: ignore
@@ -59,6 +60,16 @@ from .constants import (
     current_dir,
 )
 from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+
+# Local debug logger to avoid import cycles
+_DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
+
+def _debug_log(msg: str) -> None:
+    try:
+        with open(_DEBUG_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"{datetime.datetime.now().isoformat()} | {msg}\n")
+    except Exception:
+        pass
 
 # Lightweight context for the open Main Menu to allow dynamic UI refreshes
 _MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
@@ -272,6 +283,7 @@ def show_main_menu(
     and quick access buttons for Stats and Achievements.
     Callbacks apply changes and handle persistence in the caller.
     """
+    _debug_log("ui.show_main_menu: enter")
     dialog = QDialog(mw)
     dialog.setWindowTitle("AnkiScape Menu")
     dialog.setMinimumWidth(720)
@@ -962,7 +974,9 @@ def show_main_menu(
     f_layout.addWidget(close)
     layout.addWidget(footer)
     dialog.setLayout(layout)
+    _debug_log("ui.show_main_menu: about to exec")
     dialog.exec()
+    _debug_log("ui.show_main_menu: dialog closed")
 
 
 def show_tree_selection_dialog(current_tree: str, woodcutting_level: int, TREE_DATA: dict, TREE_IMAGES: dict) -> Optional[str]:

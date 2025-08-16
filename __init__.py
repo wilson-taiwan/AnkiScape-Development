@@ -45,6 +45,10 @@ from .ui import (
 )
 from . import ui
 from .deck_injection_pure import DeckBrowserContent as _DBC, inject_into_deck_browser_content
+from .injectors import inject_reviewer_floating_button as _inject_reviewer_floating_button
+from .injectors import inject_overview_floating_button as _inject_overview_floating_button
+from .injectors import register_deck_browser_button as _register_deck_browser_button
+from .injectors import force_deck_browser_refresh as _force_deck_browser_refresh
 from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
 
 global card_turned, exp_awarded, answer_shown
@@ -197,8 +201,8 @@ def on_crafting_answer():
     except Exception:
         pass
 
-        _refresh_skill_availability()
-        _show_exp(exp_gained)
+    _refresh_skill_availability()
+    _show_exp(exp_gained)
 
 def show_bar_selection():
     selected = ui.show_bar_selection_dialog(
@@ -288,6 +292,7 @@ def _set_value(key: str, value):
 
 
 def initialize_menu():
+    debug_log("initialize_menu: creating AnkiScape menu")
     ui.create_menu(on_main_menu=_on_main_menu)
     # Refresh Deck Browser so injected content becomes visible after login
     try:
@@ -335,8 +340,8 @@ def on_smithing_answer():
     except Exception:
         pass
 
-        _refresh_skill_availability()
-        _show_exp(exp_gained)
+    _refresh_skill_availability()
+    _show_exp(exp_gained)
 from .logic import calculate_woodcutting_probability, calculate_mining_probability
 
 
@@ -460,17 +465,6 @@ def initialize_exp_popup():
     mw.exp_popup = ExpPopup(mw)
 
 
-# Set up hooks
-addHook("profileLoaded", load_player_data)
-addHook("profileLoaded", initialize_exp_popup)
-addHook("profileLoaded", initialize_skill)
-addHook("profileLoaded", initialize_menu)
-addHook("profileLoaded", lambda: _register_deck_browser_button())
-
-gui_hooks.reviewer_did_show_question.append(on_card_did_show)
-gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
-gui_hooks.reviewer_did_show_answer.append(on_show_answer)
-
 # Flexible wrappers to handle version differences in hook signatures
 def _on_rev_show_question(*_args, **_kwargs):
     _inject_reviewer_floating_button()
@@ -478,518 +472,99 @@ def _on_rev_show_question(*_args, **_kwargs):
 def _on_rev_show_answer(*_args, **_kwargs):
     _inject_reviewer_floating_button()
 
-gui_hooks.reviewer_did_show_question.append(_on_rev_show_question)
-gui_hooks.reviewer_did_show_answer.append(_on_rev_show_answer)
-
-Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
+# Centralized hook registration
+try:
+    from . import hooks as _hooks
+    _hooks.register_hooks(
+        {
+            "profile_loaded": [
+                load_player_data,
+                initialize_exp_popup,
+                initialize_skill,
+                initialize_menu,
+                (lambda: _register_deck_browser_button()),
+            ],
+            "reviewer_question": [on_card_did_show, _on_rev_show_question],
+            "reviewer_answer": [on_card_did_show, on_show_answer, _on_rev_show_answer],
+            "answer_wrapper": on_answer_card,
+        }
+    )
+except Exception:
+    # Fallback: in case hooks module import fails, keep behavior by direct registration
+    try:
+        addHook("profileLoaded", load_player_data)
+        addHook("profileLoaded", initialize_exp_popup)
+        addHook("profileLoaded", initialize_skill)
+        addHook("profileLoaded", initialize_menu)
+        addHook("profileLoaded", lambda: _register_deck_browser_button())
+    except Exception:
+        pass
+    try:
+        gui_hooks.reviewer_did_show_question.append(on_card_did_show)
+        gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
+        gui_hooks.reviewer_did_show_answer.append(on_show_answer)
+        gui_hooks.reviewer_did_show_question.append(_on_rev_show_question)
+        gui_hooks.reviewer_did_show_answer.append(_on_rev_show_answer)
+        Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
+    except Exception:
+        pass
 
 # Menu is created on profile load via initialize_menu
 
-# --- Deck Browser bottom button integration ---
-
-def _inject_reviewer_floating_button(_=None):
-    """Ensure a floating AnkiScape pill is present in the Reviewer webview."""
-    try:
-        # Respect settings
-        enabled = True
-        pos = "right"
-        try:
-            enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
-            pos = mw.col.get_config("ankiscape_floating_position", "right")
-            if pos not in ("left", "right"):
-                pos = "right"
-        except Exception:
-            pass
-        if not enabled:
-            js_remove = r"""
-            (function(){ var el = document.getElementById('ankiscape-float'); if (el && el.parentElement){ el.parentElement.removeChild(el);} })();
-            """
-            mw.reviewer.web.eval(js_remove)
-            debug_log("inject_reviewer_floating_button: disabled; removed")
-            return
-        js = r"""
-        (function(){
-            try{
-                var wrap = document.getElementById('ankiscape-float');
-                if (!wrap) {
-                    wrap = document.createElement('div');
-                    wrap.id = 'ankiscape-float';
-                    wrap.style.position = 'fixed';
-                    // position set below
-                    wrap.style.bottom = '16px';
-                    wrap.style.zIndex = '9999';
-                    document.body.appendChild(wrap);
-                }
-                // Reset position and apply current side
-                wrap.style.left = '';
-                wrap.style.right = '';
-                if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
-
-                var btn = document.getElementById('ankiscape-btn');
-                if (!btn) {
-                    btn = document.createElement('a');
-                    btn.id = 'ankiscape-btn';
-                }
-                // Normalize styles/content (icon-only)
-                btn.href = '#';
-                btn.style.padding = '10px';
-                btn.style.border = 'none';
-                btn.style.borderRadius = '20px';
-                btn.style.background = 'transparent';
-                btn.style.boxShadow = 'none';
-                btn.style.textDecoration = 'none';
-                btn.style.outline = 'none';
-                btn.style.webkitTapHighlightColor = 'transparent';
-                btn.title = 'AnkiScape';
-                var img = btn.querySelector('img');
-                if (!img) { btn.textContent = ''; img = document.createElement('img'); btn.appendChild(img); }
-                img.alt = 'AnkiScape';
-                img.style.width = '24px';
-                img.style.height = '24px';
-                img.style.display = 'block';
-                img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                img.src = '__ICON_DATA_URI__';
-                // Bind click handler only once to avoid duplicate pycmd messages
-                if (!btn.dataset.ankiscapeBound) {
-                    btn.addEventListener('click', function(ev){
-                        ev.preventDefault();
-                        try { pycmd('ankiscape_open_menu'); } catch(e){}
-                        return false;
-                    });
-                    btn.dataset.ankiscapeBound = '1';
-                }
-                // Ensure it sits in our wrap
-                if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
-                try { pycmd('ankiscape_log:review_floating_inserted'); } catch(e){}
-            } catch(e) { try { pycmd('ankiscape_log:review_js_error'); } catch(_){} }
-        })();
-        """
-        # Embed icon data URI for the floating pill
-        try:
-            from .deck_injection_pure import _get_icon_data_uri
-            icon_uri = _get_icon_data_uri() or ''
-        except Exception:
-            icon_uri = ''
-        js = js.replace("__POS__", pos).replace("__ICON_DATA_URI__", icon_uri)
-        debug_log("inject_reviewer_floating_button: eval")
-        mw.reviewer.web.eval(js)
-    except Exception:
-        debug_log("inject_reviewer_floating_button: failed")
-
-def _inject_overview_floating_button(overview=None, content=None):  # matches deck_browser_will_render-like signature
-    """Ensure a floating pill exists on the Overview (pre-review) screen."""
-    try:
-        web = None
-        try:
-            web = overview.web
-        except Exception:
-            # fallback: try mw.overview.web on some versions
-            web = getattr(getattr(mw, 'overview', None), 'web', None)
-        if not web:
-            debug_log("inject_overview_floating_button: no web")
-            return
-        # Respect settings
-        enabled = True
-        pos = "right"
-        try:
-            enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
-            pos = mw.col.get_config("ankiscape_floating_position", "right")
-            if pos not in ("left", "right"):
-                pos = "right"
-        except Exception:
-            pass
-        if not enabled:
-            js_remove = r"""
-            (function(){ var el = document.getElementById('ankiscape-float'); if (el && el.parentElement){ el.parentElement.removeChild(el);} })();
-            """
-            web.eval(js_remove)
-            debug_log("inject_overview_floating_button: disabled; removed")
-            return
-        js = r"""
-        (function(){
-            try{
-                var wrap = document.getElementById('ankiscape-float');
-                if (!wrap) {
-                    wrap = document.createElement('div');
-                    wrap.id = 'ankiscape-float';
-                    wrap.style.position = 'fixed';
-                    // position set below
-                    wrap.style.bottom = '16px';
-                    wrap.style.zIndex = '9999';
-                    document.body.appendChild(wrap);
-                }
-                // Reset position and apply current side
-                wrap.style.left = '';
-                wrap.style.right = '';
-                if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
-
-                var btn = document.getElementById('ankiscape-btn');
-                if (!btn) { btn = document.createElement('a'); btn.id = 'ankiscape-btn'; }
-                // Normalize to icon-only style
-                btn.href = '#';
-                btn.style.padding = '10px';
-                btn.style.border = 'none';
-                btn.style.borderRadius = '20px';
-                btn.style.background = 'transparent';
-                btn.style.boxShadow = 'none';
-                btn.style.textDecoration = 'none';
-                btn.style.outline = 'none';
-                btn.style.webkitTapHighlightColor = 'transparent';
-                btn.title = 'AnkiScape';
-                var img = btn.querySelector('img');
-                if (!img) { btn.textContent=''; img = document.createElement('img'); btn.appendChild(img); }
-                img.alt = 'AnkiScape';
-                img.style.width = '24px';
-                img.style.height = '24px';
-                img.style.display = 'block';
-                img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                img.src = '__ICON_DATA_URI__';
-                // Bind click handler only once to avoid duplicate pycmd messages
-                if (!btn.dataset.ankiscapeBound) {
-                    btn.addEventListener('click', function(ev){
-                        ev.preventDefault();
-                        try { pycmd('ankiscape_open_menu'); } catch(e){}
-                        return false;
-                    });
-                    btn.dataset.ankiscapeBound = '1';
-                }
-                if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
-                try { pycmd('ankiscape_log:overview_floating_inserted'); } catch(e){}
-            } catch(e) { try { pycmd('ankiscape_log:overview_js_error'); } catch(_){} }
-        })();
-        """
-        try:
-            from .deck_injection_pure import _get_icon_data_uri
-            icon_uri = _get_icon_data_uri() or ''
-        except Exception:
-            icon_uri = ''
-        js = js.replace("__POS__", pos).replace("__ICON_DATA_URI__", icon_uri)
-        debug_log("inject_overview_floating_button: eval")
-        web.eval(js)
-    except Exception:
-        debug_log("inject_overview_floating_button: failed")
-
-
-def _register_deck_browser_button():
-    """Inject an 'AnkiScape' button near the bottom links and wire it to open the menu."""
-    try:
-        from aqt import gui_hooks as _hooks  # type: ignore
-    except Exception:
-        return
-    global _ANKISCAPE_HOOKS_REGISTERED
-    if _ANKISCAPE_HOOKS_REGISTERED:
-        debug_log("_register_deck_browser_button: hooks already registered; skipping")
-        return
-    try:
-        debug_log("_register_deck_browser_button: registering hooks; available: " + ", ".join([n for n in dir(_hooks) if not n.startswith("__")][:40]))
-    except Exception:
-        debug_log("_register_deck_browser_button: registering hooks (could not list attrs)")
-
-    def _add_button(deck_browser, content):  # type: ignore[no-redef]
-        debug_log("_add_button: called")
-        # Use pure injection logic for determinism and testability
-        try:
-            # Diagnostics: log which fields exist and sample lengths
-            try:
-                has_links = hasattr(content, "links") and isinstance(getattr(content, "links"), str)
-                has_stats = hasattr(content, "stats") and isinstance(getattr(content, "stats"), str)
-                has_tree = hasattr(content, "tree") and isinstance(getattr(content, "tree"), str)
-                debug_log(f"_add_button: fields links={has_links} stats={has_stats} tree={has_tree}")
-            except Exception:
-                debug_log("_add_button: field introspection failed")
-            db_content = _DBC(
-                links=getattr(content, "links", None),
-                stats=getattr(content, "stats", None),
-                tree=getattr(content, "tree", None),
-            )
-            before_links, before_stats, before_tree = db_content.links, db_content.stats, db_content.tree
-            db_content = inject_into_deck_browser_content(db_content)
-            if db_content.links != before_links:
-                if hasattr(content, "links"):
-                    content.links = db_content.links
-                else:
-                    # Links not exposed; do nothing here to avoid overlapping Heatmap
-                    debug_log("_add_button: links attr missing; skipping to avoid overlap")
-                debug_log("_add_button: injected into links")
-            elif db_content.stats != before_stats or db_content.tree != before_tree:
-                # We no longer inject into stats/tree by design
-                debug_log("_add_button: no injection (stats/tree avoided)")
-            else:
-                debug_log("_add_button: already present; no injection")
-        except Exception as e:
-            debug_log(f"_add_button: error {e}")
-
+    # --- Handle JS bridge messages from injected buttons ---
     def _on_js_message(handled, message, context):  # type: ignore[no-redef]
-        debug_log(f"_on_js_message: {message}")
-        if isinstance(message, str) and message.startswith("ankiscape_log:"):
-            debug_log(f"js: {message[len('ankiscape_log:'):]}")
-            return handled
-        if message == "ankiscape_open_menu":
-            # If already open, just focus it; otherwise open (with debounce)
-            try:
-                if focus_main_menu_if_open():
-                    return (True, None)
-            except Exception:
-                pass
-            try:
-                global _LAST_MENU_OPEN_TS
-                now = time.monotonic()
-                # Ignore rapid duplicate requests (e.g., multiple JS listeners)
-                if now - _LAST_MENU_OPEN_TS < 0.5:
-                    return (True, None)
-                _LAST_MENU_OPEN_TS = now
-            except Exception:
-                pass
-            _on_main_menu()
-            return (True, None)
-        return handled
-
-    def _did_render(deck_browser):  # type: ignore[no-redef]
+        """Respond to messages sent via pycmd() in injected JS."""
         try:
-            # Read config to decide whether to allow floating fallback and which side
-            enable_floating = True
-            float_pos = 'right'
-            try:
-                enable_floating = bool(mw.col.get_config('ankiscape_floating_enabled', True))
-                p = mw.col.get_config('ankiscape_floating_position', 'right')
-                float_pos = p if p in ('left','right') else 'right'
-            except Exception:
-                pass
-            # Resolve icon data URI
-            try:
-                from .deck_injection_pure import _get_icon_data_uri
-                _icon_uri = _get_icon_data_uri() or ''
-            except Exception:
-                _icon_uri = ''
-            js = r"""
-            (function(){
-                try {
-                    // Don't early-return; we might need to reposition the wrap based on settings
-                    function makeBtn(){
-                        var a = document.createElement('a');
-                        a.id = 'ankiscape-btn';
-                        a.href = '#';
-                        a.style.marginLeft = '8px';
-                        a.style.padding = '6px';
-                        a.style.border = 'none';
-                        a.style.borderRadius = '8px';
-                        a.style.textDecoration = 'none';
-                        a.style.background = 'transparent';
-                        a.title = 'AnkiScape';
-                        var img = document.createElement('img');
-                        img.alt = 'AnkiScape';
-                        img.style.width = '24px';
-                        img.style.height = '24px';
-                        img.style.display = 'block';
-                        img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                        img.src = '__ICON_DATA_URI__';
-                        a.appendChild(img);
-                        if (!a.dataset.ankiscapeBound) {
-                            a.addEventListener('click', function(ev){
-                                ev.preventDefault();
-                                try { pycmd('ankiscape_open_menu'); } catch(e){}
-                                return false;
-                            });
-                            a.dataset.ankiscapeBound = '1';
-                        }
-                        return a;
-                    }
-
-                    // 1) Try bottom actions row: insert after last known action
-                    var elems = Array.from(document.querySelectorAll('a,button'));
-                    var actions = elems.filter(function(e){
-                        var t = (e.textContent || '').trim();
-                        return /(Get Shared|Create Deck|Import)/i.test(t);
-                    });
-                    if (actions.length) {
-                        var last = actions[actions.length - 1];
-                        var btn = document.getElementById('ankiscape-btn') || makeBtn();
-                        // If existing button lacks an img, replace its contents
-                        if (!btn.querySelector('img')) {
-                            btn.textContent = '';
-                            var img1 = document.createElement('img');
-                            img1.alt = 'AnkiScape'; img1.style.width='24px'; img1.style.height='24px'; img1.style.display='block'; img1.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                            img1.src='__ICON_DATA_URI__'; btn.appendChild(img1);
-                        }
-                        if (last.parentElement) {
-                            if (last.nextSibling) {
-                                last.parentElement.insertBefore(btn, last.nextSibling);
-                            } else {
-                                last.parentElement.appendChild(btn);
-                            }
-                            try { pycmd('ankiscape_log:after_last_action(' + actions.length + ')'); } catch(e){}
-                            return;
-                        }
-                    }
-
-                    // 2) Try top nav: find Decks/Add/Browse/Stats/Sync anchors and append next to Sync
-                    var topAnchors = elems.filter(function(e){
-                        var t = (e.textContent || '').trim();
-                        return /(Decks|Add|Browse|Stats|Sync)/i.test(t);
-                    });
-                    if (topAnchors.length) {
-                        // Find the rightmost among these
-                        var rightmost = topAnchors[topAnchors.length - 1];
-                        var btn2 = document.getElementById('ankiscape-btn') || makeBtn();
-                        if (!btn2.querySelector('img')) {
-                            btn2.textContent = '';
-                            var img2 = document.createElement('img');
-                            img2.alt='AnkiScape'; img2.style.width='24px'; img2.style.height='24px'; img2.style.display='block'; img2.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                            img2.src='__ICON_DATA_URI__'; btn2.appendChild(img2);
-                        }
-                        if (rightmost.parentElement) {
-                            if (rightmost.nextSibling) {
-                                rightmost.parentElement.insertBefore(btn2, rightmost.nextSibling);
-                            } else {
-                                rightmost.parentElement.appendChild(btn2);
-                            }
-                            try { pycmd('ankiscape_log:inserted_topnav(' + topAnchors.length + ')'); } catch(e){}
-                            return;
-                        }
-                    }
-
-                    // 3) Fallback: try known footer selectors
-                    var footer = document.querySelector('.links') || document.querySelector('#links') || null;
-                    if (footer) {
-                        var btn3 = document.getElementById('ankiscape-btn') || makeBtn();
-                        if (!btn3.querySelector('img')) {
-                            btn3.textContent = '';
-                            var img3 = document.createElement('img');
-                            img3.alt='AnkiScape'; img3.style.width='24px'; img3.style.height='24px'; img3.style.display='block'; img3.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                            img3.src='__ICON_DATA_URI__'; btn3.appendChild(img3);
-                        }
-                        footer.appendChild(btn3);
-                        try { pycmd('ankiscape_log:inserted_selector'); } catch(e){}
-                        return;
-                    }
-
-                    // 4) Last resort: floating edge-aligned pill
-                    if (__ENABLE_FLOATING__) {
-                        var wrap = document.getElementById('ankiscape-float');
-                        if (!wrap) {
-                            wrap = document.createElement('div');
-                            wrap.id = 'ankiscape-float';
-                            wrap.style.position = 'fixed';
-                            // position set below
-                            wrap.style.bottom = '16px';
-                            wrap.style.zIndex = '9999';
-                            document.body.appendChild(wrap);
-                        }
-                        // Reset position and set based on config
-                        wrap.style.left = '';
-                        wrap.style.right = '';
-                        if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
-                        var btn = document.getElementById('ankiscape-btn');
-                        if (!btn) { btn = makeBtn(); }
-                        if (!btn.querySelector('img')) {
-                            btn.textContent = '';
-                            var img4 = document.createElement('img');
-                            img4.alt='AnkiScape'; img4.style.width='24px'; img4.style.height='24px'; img4.style.display='block'; img4.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
-                            img4.src='__ICON_DATA_URI__'; btn.appendChild(img4);
-                        }
-                        if (btn.parentElement !== wrap) { wrap.appendChild(btn); } else if (!document.getElementById('ankiscape-btn')) { wrap.appendChild(btn); }
-                        try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
-                    }
-                } catch (e) {
-                    try { pycmd('ankiscape_log:js_error'); } catch(_){}
-                }
-            })();
-            """
-            js = js.replace("__ENABLE_FLOATING__", "true" if enable_floating else "false").replace("__POS__", float_pos).replace("__ICON_DATA_URI__", _icon_uri)
-            deck_browser.web.eval(js)
-            debug_log("_did_render: eval injected fallback button if absent")
+            if isinstance(message, str):
+                if message == "ankiscape_open_menu":
+                    debug_log("bridge: ankiscape_open_menu received")
+                    global _LAST_MENU_OPEN_TS
+                    now = time.time()
+                    if is_main_menu_open():
+                        debug_log("bridge: menu already open; focusing")
+                        try:
+                            focus_main_menu_if_open()
+                        except Exception:
+                            pass
+                    elif now - _LAST_MENU_OPEN_TS > 0.4:  # debounce
+                        _LAST_MENU_OPEN_TS = now
+                        debug_log("bridge: opening main menu via _on_main_menu")
+                        try:
+                            try:
+                                from aqt.qt import QTimer  # type: ignore
+                            except Exception:
+                                QTimer = None  # type: ignore
+                            if QTimer is not None:
+                                QTimer.singleShot(0, _on_main_menu)
+                                debug_log("bridge: scheduled _on_main_menu with QTimer")
+                            else:
+                                _on_main_menu()
+                                debug_log("bridge: called _on_main_menu directly (no QTimer)")
+                        except Exception:
+                            debug_log("bridge: _on_main_menu raised; swallowed")
+                            pass
+                    return (True, message)
+                if message.startswith("ankiscape_log:"):
+                    try:
+                        debug_log(f"js: {message[len('ankiscape_log:'):]}")
+                    except Exception:
+                        pass
         except Exception:
-            debug_log("_did_render: eval failed")
-
-    # Register hooks: remove then append (avoid membership tests that may fail)
-    try:
-        try:
-            _hooks.deck_browser_will_render_content.remove(_add_button)
-        except Exception:
+            debug_log("bridge: exception in _on_js_message")
             pass
-        _hooks.deck_browser_will_render_content.append(_add_button)
-        debug_log("registered: deck_browser_will_render_content")
-    except Exception as e:
-        debug_log(f"register failed: deck_browser_will_render_content: {e}")
-    try:
-        try:
-            _hooks.deck_browser_did_render.remove(_did_render)
-        except Exception:
-            pass
-        _hooks.deck_browser_did_render.append(_did_render)
-        debug_log("registered: deck_browser_did_render")
-    except Exception as e:
-        debug_log(f"register failed: deck_browser_did_render: {e}")
-    try:
-        try:
-            _hooks.webview_did_receive_js_message.remove(_on_js_message)
-        except Exception:
-            pass
-        _hooks.webview_did_receive_js_message.append(_on_js_message)
-        debug_log("registered: webview_did_receive_js_message")
-    except Exception as e:
-        debug_log(f"register failed: webview_did_receive_js_message: {e}")
+        return (handled, message)
 
-    # Add to the deck options (gear) menu as an additional entry point
-    def _will_show_options_menu(menu, deck_id):  # type: ignore[no-redef]
-        try:
-            act = menu.addAction("AnkiScape")
-            act.triggered.connect(lambda: _on_main_menu())
-            debug_log("will_show_options_menu: added action")
-        except Exception:
-            debug_log("will_show_options_menu: failed to add action")
     try:
-        try:
-            _hooks.deck_browser_will_show_options_menu.remove(_will_show_options_menu)
-        except Exception:
-            pass
-        _hooks.deck_browser_will_show_options_menu.append(_will_show_options_menu)
-        debug_log("registered: deck_browser_will_show_options_menu")
-    except Exception as e:
-        debug_log(f"register failed: deck_browser_will_show_options_menu: {e}")
-
-    # Legacy addHook fallback for older environments (name: deckBrowserWillRenderContent)
-    try:
-        def _legacy_add_button(content):
-            debug_log("_legacy_add_button: called")
-            try:
-                db_content = _DBC(stats=getattr(content, "stats", None), tree=getattr(content, "tree", None))
-                before_stats, before_tree = db_content.stats, db_content.tree
-                db_content = inject_into_deck_browser_content(db_content)
-                if db_content.stats != before_stats:
-                    content.stats = db_content.stats
-                    debug_log("_legacy_add_button: injected into stats")
-                elif db_content.tree != before_tree:
-                    content.tree = db_content.tree
-                    debug_log("_legacy_add_button: injected into tree")
-                else:
-                    debug_log("_legacy_add_button: already present; no injection")
-            except Exception as e:
-                debug_log(f"_legacy_add_button: error {e}")
-        addHook("deckBrowserWillRenderContent", _legacy_add_button)
-        debug_log("legacy registered: deckBrowserWillRenderContent")
-    except Exception as e:
-        debug_log(f"legacy register failed: deckBrowserWillRenderContent: {e}")
-
-    _ANKISCAPE_HOOKS_REGISTERED = True
-
-    # Also hook Overview rendering to inject floating pill on the pre-review screen
-    try:
-        from aqt import gui_hooks as _hooks2  # type: ignore
-        # overview_did_refresh exists on modern Anki; if not, we'll use legacy below
-        if hasattr(_hooks2, 'overview_did_refresh'):
-            _hooks2.overview_did_refresh.append(lambda overview: _inject_overview_floating_button(overview))
-            debug_log("registered: overview_did_refresh")
-        elif hasattr(_hooks2, 'overview_will_render_content'):
-            _hooks2.overview_will_render_content.append(lambda overview, content: _inject_overview_floating_button(overview, content))
-            debug_log("registered: overview_will_render_content")
+        # Avoid duplicate registrations on addon reload
+        gui_hooks.webview_did_receive_js_message.remove(_on_js_message)
     except Exception:
-        debug_log("register failed: overview gui_hooks")
+        pass
     try:
-        addHook("overviewWillRender", lambda *a, **k: _inject_overview_floating_button())
-        debug_log("legacy registered: overviewWillRender")
-    except Exception as e:
-        debug_log(f"legacy register failed: overviewWillRender: {e}")
+        gui_hooks.webview_did_receive_js_message.append(_on_js_message)
+    except Exception:
+        pass
+
+# --- Deck Browser bottom button integration ---
 
 
 def _force_deck_browser_refresh():
@@ -1006,6 +581,8 @@ def _force_deck_browser_refresh():
         elif hasattr(db, "renderPage"):
             debug_log("force_refresh: calling deckBrowser.renderPage()")
             db.renderPage()
+        else:
+            debug_log("force_refresh: deckBrowser has no refresh or renderPage")
     except Exception:
         debug_log("force_refresh: failed to refresh")
         pass
