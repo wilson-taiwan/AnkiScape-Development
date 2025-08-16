@@ -212,6 +212,37 @@ def show_ore_selection():
 
 
 def _on_main_menu():
+    def _set_floating_enabled(val: bool):
+        try:
+            mw.col.set_config("ankiscape_floating_enabled", bool(val))
+        except Exception:
+            pass
+        # Re-inject on current screens for immediate effect
+        try:
+            _inject_reviewer_floating_button()
+        except Exception:
+            pass
+        try:
+            _inject_overview_floating_button()
+        except Exception:
+            pass
+
+    def _set_floating_position(pos: str):
+        try:
+            if pos not in ("left", "right"):
+                pos = "right"
+            mw.col.set_config("ankiscape_floating_position", pos)
+        except Exception:
+            pass
+        try:
+            _inject_reviewer_floating_button()
+        except Exception:
+            pass
+        try:
+            _inject_overview_floating_button()
+        except Exception:
+            pass
+
     ui.show_main_menu(
         player_data,
         current_skill,
@@ -220,7 +251,9 @@ def _on_main_menu():
         on_set_ore=lambda ore: _set_value("current_ore", ore),
         on_set_tree=lambda tree: _set_value("current_tree", tree),
         on_set_bar=lambda bar: _set_value("current_bar", bar),
-    on_set_craft=lambda item: _set_value("current_craft", item),
+        on_set_craft=lambda item: _set_value("current_craft", item),
+        on_set_floating_enabled=_set_floating_enabled,
+        on_set_floating_position=_set_floating_position,
     )
 
 
@@ -432,11 +465,162 @@ gui_hooks.reviewer_did_show_question.append(on_card_did_show)
 gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
 gui_hooks.reviewer_did_show_answer.append(on_show_answer)
 
+# Flexible wrappers to handle version differences in hook signatures
+def _on_rev_show_question(*_args, **_kwargs):
+    _inject_reviewer_floating_button()
+
+def _on_rev_show_answer(*_args, **_kwargs):
+    _inject_reviewer_floating_button()
+
+gui_hooks.reviewer_did_show_question.append(_on_rev_show_question)
+gui_hooks.reviewer_did_show_answer.append(_on_rev_show_answer)
+
 Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
 
 # Menu is created on profile load via initialize_menu
 
 # --- Deck Browser bottom button integration ---
+
+def _inject_reviewer_floating_button(_=None):
+    """Ensure a floating AnkiScape pill is present in the Reviewer webview."""
+    try:
+        # Respect settings
+        enabled = True
+        pos = "right"
+        try:
+            enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
+            pos = mw.col.get_config("ankiscape_floating_position", "right")
+            if pos not in ("left", "right"):
+                pos = "right"
+        except Exception:
+            pass
+        if not enabled:
+            js_remove = r"""
+            (function(){ var el = document.getElementById('ankiscape-float'); if (el && el.parentElement){ el.parentElement.removeChild(el);} })();
+            """
+            mw.reviewer.web.eval(js_remove)
+            debug_log("inject_reviewer_floating_button: disabled; removed")
+            return
+        js = r"""
+        (function(){
+            try{
+                var wrap = document.getElementById('ankiscape-float');
+                if (!wrap) {
+                    wrap = document.createElement('div');
+                    wrap.id = 'ankiscape-float';
+                    wrap.style.position = 'fixed';
+                    // position set below
+                    wrap.style.bottom = '16px';
+                    wrap.style.zIndex = '9999';
+                    document.body.appendChild(wrap);
+                }
+                // Reset position and apply current side
+                wrap.style.left = '';
+                wrap.style.right = '';
+                if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
+
+                var btn = document.getElementById('ankiscape-btn');
+                if (!btn) {
+                    btn = document.createElement('a');
+                    btn.id = 'ankiscape-btn';
+                    btn.href = '#';
+                    btn.style.padding = '8px 12px';
+                    btn.style.border = '1px solid #ccc';
+                    btn.style.borderRadius = '18px';
+                    btn.style.background = '#fff';
+                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.15)';
+                    btn.style.textDecoration = 'none';
+                    btn.textContent = 'AnkiScape';
+                    btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                    wrap.appendChild(btn);
+                } else {
+                    // Ensure it sits in our wrap
+                    if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
+                }
+                try { pycmd('ankiscape_log:review_floating_inserted'); } catch(e){}
+            } catch(e) { try { pycmd('ankiscape_log:review_js_error'); } catch(_){} }
+        })();
+        """
+        js = js.replace("__POS__", pos)
+        debug_log("inject_reviewer_floating_button: eval")
+        mw.reviewer.web.eval(js)
+    except Exception:
+        debug_log("inject_reviewer_floating_button: failed")
+
+def _inject_overview_floating_button(overview=None, content=None):  # matches deck_browser_will_render-like signature
+    """Ensure a floating pill exists on the Overview (pre-review) screen."""
+    try:
+        web = None
+        try:
+            web = overview.web
+        except Exception:
+            # fallback: try mw.overview.web on some versions
+            web = getattr(getattr(mw, 'overview', None), 'web', None)
+        if not web:
+            debug_log("inject_overview_floating_button: no web")
+            return
+        # Respect settings
+        enabled = True
+        pos = "right"
+        try:
+            enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
+            pos = mw.col.get_config("ankiscape_floating_position", "right")
+            if pos not in ("left", "right"):
+                pos = "right"
+        except Exception:
+            pass
+        if not enabled:
+            js_remove = r"""
+            (function(){ var el = document.getElementById('ankiscape-float'); if (el && el.parentElement){ el.parentElement.removeChild(el);} })();
+            """
+            web.eval(js_remove)
+            debug_log("inject_overview_floating_button: disabled; removed")
+            return
+        js = r"""
+        (function(){
+            try{
+                var wrap = document.getElementById('ankiscape-float');
+                if (!wrap) {
+                    wrap = document.createElement('div');
+                    wrap.id = 'ankiscape-float';
+                    wrap.style.position = 'fixed';
+                    // position set below
+                    wrap.style.bottom = '16px';
+                    wrap.style.zIndex = '9999';
+                    document.body.appendChild(wrap);
+                }
+                // Reset position and apply current side
+                wrap.style.left = '';
+                wrap.style.right = '';
+                if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
+
+                var btn = document.getElementById('ankiscape-btn');
+                if (!btn) {
+                    btn = document.createElement('a');
+                    btn.id = 'ankiscape-btn';
+                    btn.href = '#';
+                    btn.style.padding = '8px 12px';
+                    btn.style.border = '1px solid #ccc';
+                    btn.style.borderRadius = '18px';
+                    btn.style.background = '#fff';
+                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.15)';
+                    btn.style.textDecoration = 'none';
+                    btn.textContent = 'AnkiScape';
+                    btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                    wrap.appendChild(btn);
+                } else {
+                    if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
+                }
+                try { pycmd('ankiscape_log:overview_floating_inserted'); } catch(e){}
+            } catch(e) { try { pycmd('ankiscape_log:overview_js_error'); } catch(_){} }
+        })();
+        """
+        js = js.replace("__POS__", pos)
+        debug_log("inject_overview_floating_button: eval")
+        web.eval(js)
+    except Exception:
+        debug_log("inject_overview_floating_button: failed")
+
 
 def _register_deck_browser_button():
     """Inject an 'AnkiScape' button near the bottom links and wire it to open the menu."""
@@ -499,10 +683,19 @@ def _register_deck_browser_button():
 
     def _did_render(deck_browser):  # type: ignore[no-redef]
         try:
+            # Read config to decide whether to allow floating fallback and which side
+            enable_floating = True
+            float_pos = 'right'
+            try:
+                enable_floating = bool(mw.col.get_config('ankiscape_floating_enabled', True))
+                p = mw.col.get_config('ankiscape_floating_position', 'right')
+                float_pos = p if p in ('left','right') else 'right'
+            except Exception:
+                pass
             js = r"""
             (function(){
                 try {
-                    if (document.getElementById('ankiscape-btn')) { return; }
+                    // Don't early-return; we might need to reposition the wrap based on settings
                     function makeBtn(){
                         var a = document.createElement('a');
                         a.id = 'ankiscape-btn';
@@ -565,24 +758,33 @@ def _register_deck_browser_button():
                         return;
                     }
 
-                    // 4) Last resort: floating edge-aligned pill (bottom-right)
-                    var wrap = document.getElementById('ankiscape-float');
-                    if (!wrap) {
-                        wrap = document.createElement('div');
-                        wrap.id = 'ankiscape-float';
-                        wrap.style.position = 'fixed';
-                        wrap.style.right = '16px';
-                        wrap.style.bottom = '16px';
-                        wrap.style.zIndex = '9999';
-                        document.body.appendChild(wrap);
+                    // 4) Last resort: floating edge-aligned pill
+                    if (__ENABLE_FLOATING__) {
+                        var wrap = document.getElementById('ankiscape-float');
+                        if (!wrap) {
+                            wrap = document.createElement('div');
+                            wrap.id = 'ankiscape-float';
+                            wrap.style.position = 'fixed';
+                            // position set below
+                            wrap.style.bottom = '16px';
+                            wrap.style.zIndex = '9999';
+                            document.body.appendChild(wrap);
+                        }
+                        // Reset position and set based on config
+                        wrap.style.left = '';
+                        wrap.style.right = '';
+                        if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
+                        var btn = document.getElementById('ankiscape-btn');
+                        if (!btn) { btn = makeBtn(); }
+                        if (btn.parentElement !== wrap) { wrap.appendChild(btn); } else if (!document.getElementById('ankiscape-btn')) { wrap.appendChild(btn); }
+                        try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
                     }
-                    wrap.appendChild(makeBtn());
-                    try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
                 } catch (e) {
                     try { pycmd('ankiscape_log:js_error'); } catch(_){}
                 }
             })();
             """
+            js = js.replace("__ENABLE_FLOATING__", "true" if enable_floating else "false").replace("__POS__", float_pos)
             deck_browser.web.eval(js)
             debug_log("_did_render: eval injected fallback button if absent")
         except Exception:
@@ -659,6 +861,24 @@ def _register_deck_browser_button():
         debug_log(f"legacy register failed: deckBrowserWillRenderContent: {e}")
 
     _ANKISCAPE_HOOKS_REGISTERED = True
+
+    # Also hook Overview rendering to inject floating pill on the pre-review screen
+    try:
+        from aqt import gui_hooks as _hooks2  # type: ignore
+        # overview_did_refresh exists on modern Anki; if not, we'll use legacy below
+        if hasattr(_hooks2, 'overview_did_refresh'):
+            _hooks2.overview_did_refresh.append(lambda overview: _inject_overview_floating_button(overview))
+            debug_log("registered: overview_did_refresh")
+        elif hasattr(_hooks2, 'overview_will_render_content'):
+            _hooks2.overview_will_render_content.append(lambda overview, content: _inject_overview_floating_button(overview, content))
+            debug_log("registered: overview_will_render_content")
+    except Exception:
+        debug_log("register failed: overview gui_hooks")
+    try:
+        addHook("overviewWillRender", lambda *a, **k: _inject_overview_floating_button())
+        debug_log("legacy registered: overviewWillRender")
+    except Exception as e:
+        debug_log(f"legacy register failed: overviewWillRender: {e}")
 
 
 def _force_deck_browser_refresh():

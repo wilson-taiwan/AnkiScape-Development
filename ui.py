@@ -240,6 +240,8 @@ def show_main_menu(
     on_set_tree,
     on_set_bar,
     on_set_craft,
+    on_set_floating_enabled=None,
+    on_set_floating_position=None,
 ):
     """Show a consolidated window with tabs for Skills, Mining, Woodcutting, Smithing, Crafting,
     and quick access buttons for Stats and Achievements.
@@ -857,6 +859,62 @@ def show_main_menu(
     if os.path.exists(ach_icon_path):
         tabs.setTabIcon(tabs.indexOf(ach_tab), QIcon(ach_icon_path))
     tabs.setTabToolTip(tabs.indexOf(ach_tab), "Review your achievements")
+
+    # Settings tab (floating pill controls)
+    settings_tab = QWidget()
+    set_layout = QVBoxLayout(settings_tab)
+    set_layout.setContentsMargins(12, 12, 12, 12)
+    set_layout.setSpacing(10)
+    set_layout.addWidget(QLabel("Floating Button"))
+
+    # Load current settings (safe defaults if config unavailable)
+    floating_enabled = True
+    floating_position = "right"
+    try:
+        if mw and getattr(mw, 'col', None):
+            floating_enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
+            pos = mw.col.get_config("ankiscape_floating_position", "right")
+            floating_position = pos if pos in ("left", "right") else "right"
+    except Exception:
+        pass
+
+    enabled_cb = QCheckBox("Enable floating pill")
+    enabled_cb.setChecked(floating_enabled)
+    set_layout.addWidget(enabled_cb)
+
+    pos_row = QWidget()
+    prl = QHBoxLayout(pos_row)
+    prl.setContentsMargins(0, 0, 0, 0)
+    prl.setSpacing(12)
+    prl.addWidget(QLabel("Position:"))
+    rb_group = QButtonGroup(pos_row)
+    rb_right = QRadioButton("Bottom right")
+    rb_left = QRadioButton("Bottom left")
+    rb_group.addButton(rb_right)
+    rb_group.addButton(rb_left)
+    rb_right.setChecked(floating_position == "right")
+    rb_left.setChecked(floating_position == "left")
+    prl.addWidget(rb_left)
+    prl.addWidget(rb_right)
+    prl.addStretch(1)
+    set_layout.addWidget(pos_row)
+
+    # Disable/enable radio buttons based on checkbox
+    def _sync_pos_enabled():
+        rb_left.setEnabled(enabled_cb.isChecked())
+        rb_right.setEnabled(enabled_cb.isChecked())
+    _sync_pos_enabled()
+    enabled_cb.stateChanged.connect(lambda _=None: _sync_pos_enabled())
+
+    # Wire persistence through callbacks if provided
+    if callable(on_set_floating_enabled):
+        enabled_cb.stateChanged.connect(lambda _=None: on_set_floating_enabled(bool(enabled_cb.isChecked())))
+    if callable(on_set_floating_position):
+        rb_left.toggled.connect(lambda checked=False: checked and on_set_floating_position("left"))
+        rb_right.toggled.connect(lambda checked=False: checked and on_set_floating_position("right"))
+
+    tabs.addTab(settings_tab, "Settings")
+    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure the AnkiScape floating button")
 
     layout.addWidget(tabs)
 

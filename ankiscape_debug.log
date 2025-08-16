@@ -113,3 +113,296 @@
 2025-08-15T15:21:49.541988 | js: inserted_floating
 2025-08-15T15:21:54.199990 | _on_js_message: ankiscape_open_menu
 2025-08-15T15:22:50.148335 | _on_js_message: ankiscape_open_menu
+2025-08-15T15:25:51.876052 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:25:51.877955 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:25:51.881202 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:25:51.881327 | registered: deck_browser_will_render_content
+2025-08-15T15:25:51.881392 | registered: deck_browser_did_render
+2025-08-15T15:25:51.881449 | registered: webview_did_receive_js_message
+2025-08-15T15:25:51.881522 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:25:51.881631 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:25:51.882156 | _add_button: called
+2025-08-15T15:25:51.882220 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:25:51.882274 | _add_button: already present; no injection
+2025-08-15T15:25:51.883415 | _did_render: eval injected fallback button if absent
+2025-08-15T15:25:52.072751 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:25:52.072887 | js: inserted_floating
+2025-08-15T15:27:00.885179 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:27:00.885385 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:27:00.887966 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:27:00.888094 | registered: deck_browser_will_render_content
+2025-08-15T15:27:00.888145 | registered: deck_browser_did_render
+2025-08-15T15:27:00.888186 | registered: webview_did_receive_js_message
+2025-08-15T15:27:00.888223 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:27:00.888262 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:27:00.898713 | _add_button: called
+2025-08-15T15:27:00.898913 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:27:00.898978 | _add_button: already present; no injection
+2025-08-15T15:27:00.900747 | _did_render: eval injected fallback button if absent
+2025-08-15T15:27:01.042899 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:27:01.043117 | js: inserted_floating
+2025-08-15T15:27:02.924663 | _on_js_message: open:1755181716698
+2025-08-15T15:27:05.340325 | _on_js_message: study
+2025-08-15T15:27:05.490907 | _on_js_message: updateToolbar
+2025-08-15T15:27:07.848678 | _on_js_message: decks
+2025-08-15T15:27:07.859694 | _add_button: called
+2025-08-15T15:27:07.859934 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:27:07.860059 | _add_button: already present; no injection
+2025-08-15T15:27:07.863127 | _did_render: eval injected fallback button if absent
+2025-08-15T15:27:07.957442 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:27:07.957787 | js: inserted_floating
+2025-08-15T15:27:10.837338 | _on_js_message: open:1755181716698
+2025-08-15T15:27:17.899263 | _on_js_message: browse
+2025-08-15T15:27:18.242551 | _on_js_message: editorState:0:-1
+2025-08-15T15:27:18.843680 | _on_js_message: key:1:1420147986887:<img src="carpels%20named.jpg">
+2025-08-15T15:27:22.546171 | _on_js_message: study
+2025-08-15T15:27:22.657432 | _on_js_message: updateToolbar
+2025-08-15T15:27:28.678582 | _on_js_message: decks
+2025-08-15T15:27:28.683677 | _add_button: called
+2025-08-15T15:27:28.683819 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:27:28.683890 | _add_button: already present; no injection
+2025-08-15T15:27:28.685522 | _did_render: eval injected fallback button if absent
+2025-08-15T15:27:28.742505 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:27:28.743097 | js: inserted_floating
+2025-08-15T15:31:17.758837 | initialize_menu: forcing deck browser refresh
+2025-08-15T15:31:17.759138 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T15:31:17.763642 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T15:31:17.763778 | registered: deck_browser_will_render_content
+2025-08-15T15:31:17.763830 | registered: deck_browser_did_render
+2025-08-15T15:31:17.763878 | registered: webview_did_receive_js_message
+2025-08-15T15:31:17.763920 | registered: deck_browser_will_show_options_menu
+2025-08-15T15:31:17.763964 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T15:31:17.788705 | _add_button: called
+2025-08-15T15:31:17.788814 | _add_button: fields links=False stats=True tree=True
+2025-08-15T15:31:17.788865 | _add_button: already present; no injection
+2025-08-15T15:31:17.789974 | _did_render: eval injected fallback button if absent
+2025-08-15T15:31:17.931586 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T15:31:17.931784 | js: inserted_floating
+2025-08-15T15:31:19.498088 | _on_js_message: open:1755181716698
+2025-08-15T15:31:22.411713 | _on_js_message: study
+2025-08-15T15:31:22.641488 | _on_js_message: updateToolbar
+2025-08-15T15:31:25.761414 | _on_js_message: updateToolbar
+2025-08-15T16:00:54.487618 | initialize_menu: forcing deck browser refresh
+2025-08-15T16:00:54.488105 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T16:00:54.492837 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T16:00:54.492972 | registered: deck_browser_will_render_content
+2025-08-15T16:00:54.493026 | registered: deck_browser_did_render
+2025-08-15T16:00:54.493072 | registered: webview_did_receive_js_message
+2025-08-15T16:00:54.493133 | registered: deck_browser_will_show_options_menu
+2025-08-15T16:00:54.493194 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T16:00:54.493289 | registered: overview_did_refresh
+2025-08-15T16:00:54.493364 | legacy registered: overviewWillRender
+2025-08-15T16:00:54.493877 | _add_button: called
+2025-08-15T16:00:54.493934 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:00:54.493982 | _add_button: already present; no injection
+2025-08-15T16:00:54.495051 | _did_render: eval injected fallback button if absent
+2025-08-15T16:00:54.686961 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:00:54.687170 | js: inserted_floating
+2025-08-15T16:00:57.673135 | _on_js_message: ankiscape_open_menu
+2025-08-15T16:01:02.680715 | _on_js_message: open:1755181716698
+2025-08-15T16:01:02.698942 | inject_overview_floating_button: eval
+2025-08-15T16:01:02.753521 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T16:01:02.753721 | js: overview_floating_inserted
+2025-08-15T16:01:03.888089 | _on_js_message: ankiscape_open_menu
+2025-08-15T16:01:09.003434 | _on_js_message: study
+2025-08-15T16:01:09.019616 | inject_reviewer_floating_button: eval
+2025-08-15T16:01:09.164900 | _on_js_message: updateToolbar
+2025-08-15T16:01:09.165220 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T16:01:09.165291 | js: review_floating_inserted
+2025-08-15T16:01:10.755512 | _on_js_message: ankiscape_open_menu
+2025-08-15T16:01:28.155051 | _on_js_message: decks
+2025-08-15T16:01:28.170599 | _add_button: called
+2025-08-15T16:01:28.170874 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:01:28.170998 | _add_button: already present; no injection
+2025-08-15T16:01:28.173374 | _did_render: eval injected fallback button if absent
+2025-08-15T16:01:28.264592 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:01:28.264964 | js: inserted_floating
+2025-08-15T16:01:31.442419 | _on_js_message: open:1755181716698
+2025-08-15T16:01:31.454002 | inject_overview_floating_button: eval
+2025-08-15T16:01:31.514033 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T16:01:31.514812 | js: overview_floating_inserted
+2025-08-15T16:01:32.585843 | _on_js_message: browse
+2025-08-15T16:01:32.917541 | _on_js_message: editorState:0:-1
+2025-08-15T16:01:33.519038 | _on_js_message: key:1:1420147986887:<img src="carpels%20named.jpg">
+2025-08-15T16:01:38.704031 | _on_js_message: decks
+2025-08-15T16:01:38.715903 | _add_button: called
+2025-08-15T16:01:38.716146 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:01:38.716266 | _add_button: already present; no injection
+2025-08-15T16:01:38.718735 | _did_render: eval injected fallback button if absent
+2025-08-15T16:01:38.775457 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:01:38.775656 | js: inserted_floating
+2025-08-15T16:01:42.920748 | _on_js_message: stats
+2025-08-15T16:01:45.604098 | _on_js_message: add
+2025-08-15T16:01:45.867760 | _on_js_message: editorState:0:-1
+2025-08-15T16:01:45.886978 | _on_js_message: focus:0
+2025-08-15T16:01:46.472839 | _on_js_message: key:1:0:
+2025-08-15T16:04:55.511621 | initialize_menu: forcing deck browser refresh
+2025-08-15T16:04:55.512137 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T16:04:55.514836 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T16:04:55.514959 | registered: deck_browser_will_render_content
+2025-08-15T16:04:55.515025 | registered: deck_browser_did_render
+2025-08-15T16:04:55.515081 | registered: webview_did_receive_js_message
+2025-08-15T16:04:55.515132 | registered: deck_browser_will_show_options_menu
+2025-08-15T16:04:55.515211 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T16:04:55.515320 | registered: overview_did_refresh
+2025-08-15T16:04:55.515389 | legacy registered: overviewWillRender
+2025-08-15T16:04:55.515882 | _add_button: called
+2025-08-15T16:04:55.515940 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:04:55.515993 | _add_button: already present; no injection
+2025-08-15T16:04:55.517226 | _did_render: eval injected fallback button if absent
+2025-08-15T16:04:55.667270 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:04:55.667415 | js: inserted_floating
+2025-08-15T16:14:55.276251 | _add_button: called
+2025-08-15T16:14:55.279658 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:14:55.279976 | _add_button: already present; no injection
+2025-08-15T16:14:55.289534 | _did_render: eval injected fallback button if absent
+2025-08-15T16:14:55.411230 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:14:55.411512 | js: inserted_floating
+2025-08-15T16:24:55.258517 | _add_button: called
+2025-08-15T16:24:55.262327 | _add_button: fields links=False stats=True tree=True
+2025-08-15T16:24:55.262657 | _add_button: already present; no injection
+2025-08-15T16:24:55.271227 | _did_render: eval injected fallback button if absent
+2025-08-15T16:24:55.382048 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T16:24:55.382623 | js: inserted_floating
+2025-08-15T17:30:42.732092 | _add_button: called
+2025-08-15T17:30:42.734188 | _add_button: fields links=False stats=True tree=True
+2025-08-15T17:30:42.734281 | _add_button: already present; no injection
+2025-08-15T17:30:42.737996 | _did_render: eval injected fallback button if absent
+2025-08-15T17:30:42.876004 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T17:30:42.876170 | js: inserted_floating
+2025-08-15T18:01:50.734104 | _add_button: called
+2025-08-15T18:01:50.734715 | _add_button: fields links=False stats=True tree=True
+2025-08-15T18:01:50.734892 | _add_button: already present; no injection
+2025-08-15T18:01:50.737741 | _did_render: eval injected fallback button if absent
+2025-08-15T18:01:50.798090 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T18:01:50.798472 | js: inserted_floating
+2025-08-15T18:22:42.116993 | _add_button: called
+2025-08-15T18:22:42.119300 | _add_button: fields links=False stats=True tree=True
+2025-08-15T18:22:42.119534 | _add_button: already present; no injection
+2025-08-15T18:22:42.122958 | _did_render: eval injected fallback button if absent
+2025-08-15T18:22:42.202203 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T18:22:42.202380 | js: inserted_floating
+2025-08-15T18:37:04.430416 | _add_button: called
+2025-08-15T18:37:04.431135 | _add_button: fields links=False stats=True tree=True
+2025-08-15T18:37:04.431300 | _add_button: already present; no injection
+2025-08-15T18:37:04.434144 | _did_render: eval injected fallback button if absent
+2025-08-15T18:37:04.492266 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T18:37:04.492483 | js: inserted_floating
+2025-08-15T18:51:33.753257 | initialize_menu: forcing deck browser refresh
+2025-08-15T18:51:33.754322 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T18:51:33.757777 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T18:51:33.757885 | registered: deck_browser_will_render_content
+2025-08-15T18:51:33.757946 | registered: deck_browser_did_render
+2025-08-15T18:51:33.758002 | registered: webview_did_receive_js_message
+2025-08-15T18:51:33.758053 | registered: deck_browser_will_show_options_menu
+2025-08-15T18:51:33.758163 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T18:51:33.758251 | registered: overview_did_refresh
+2025-08-15T18:51:33.758321 | legacy registered: overviewWillRender
+2025-08-15T18:51:33.758810 | _add_button: called
+2025-08-15T18:51:33.758876 | _add_button: fields links=False stats=True tree=True
+2025-08-15T18:51:33.758929 | _add_button: already present; no injection
+2025-08-15T18:51:33.760003 | _did_render: eval injected fallback button if absent
+2025-08-15T18:51:33.927818 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T18:51:33.927969 | js: inserted_floating
+2025-08-15T18:51:37.370766 | _on_js_message: ankiscape_open_menu
+2025-08-15T18:58:40.565142 | initialize_menu: forcing deck browser refresh
+2025-08-15T18:58:40.565738 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T18:58:40.568481 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T18:58:40.568610 | registered: deck_browser_will_render_content
+2025-08-15T18:58:40.568662 | registered: deck_browser_did_render
+2025-08-15T18:58:40.568709 | registered: webview_did_receive_js_message
+2025-08-15T18:58:40.568754 | registered: deck_browser_will_show_options_menu
+2025-08-15T18:58:40.568793 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T18:58:40.568852 | registered: overview_did_refresh
+2025-08-15T18:58:40.568886 | legacy registered: overviewWillRender
+2025-08-15T18:58:40.583632 | _add_button: called
+2025-08-15T18:58:40.583766 | _add_button: fields links=False stats=True tree=True
+2025-08-15T18:58:40.583814 | _add_button: already present; no injection
+2025-08-15T18:58:40.585295 | _did_render: eval injected fallback button if absent
+2025-08-15T18:58:40.728371 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T18:58:40.728585 | js: inserted_floating
+2025-08-15T18:58:42.801125 | _on_js_message: ankiscape_open_menu
+2025-08-15T18:58:53.300592 | inject_reviewer_floating_button: disabled; removed
+2025-08-15T18:58:53.301266 | inject_overview_floating_button: disabled; removed
+2025-08-15T18:58:54.134016 | inject_reviewer_floating_button: eval
+2025-08-15T18:58:54.134780 | inject_overview_floating_button: eval
+2025-08-15T18:58:55.899629 | inject_reviewer_floating_button: eval
+2025-08-15T18:58:55.900498 | inject_overview_floating_button: eval
+2025-08-15T18:58:57.133330 | inject_reviewer_floating_button: eval
+2025-08-15T18:58:57.134532 | inject_overview_floating_button: eval
+2025-08-15T18:58:58.167315 | inject_reviewer_floating_button: eval
+2025-08-15T18:58:58.168287 | inject_overview_floating_button: eval
+2025-08-15T18:59:00.431594 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T18:59:00.431892 | js: review_floating_inserted
+2025-08-15T18:59:01.783191 | _on_js_message: ankiscape_open_menu
+2025-08-15T18:59:11.115686 | inject_reviewer_floating_button: eval
+2025-08-15T18:59:11.116567 | inject_overview_floating_button: eval
+2025-08-15T19:01:58.121868 | initialize_menu: forcing deck browser refresh
+2025-08-15T19:01:58.122138 | force_refresh: calling deckBrowser.refresh()
+2025-08-15T19:01:58.124938 | _register_deck_browser_button: registering hooks; available: Any, Callable, Card, DeckConfigDict, DeckDict, Literal, NotetypeDict, OpChangesAfterUndo, QDialog, QEvent, QMenu, QMimeData, QModelIndex, QWidget, Sequence, TagEdit, Type, UndoActionsInfo, add_cards_did_add_note, add_cards_did_change_deck, add_cards_did_change_note_type, add_cards_did_init, add_cards_might_add_note, add_cards_will_add_note, add_cards_will_show_history_menu, addcards_did_change_note_type, addcards_will_add_history_entry, addon_config_editor_will_display_json, addon_config_editor_will_save_json, addon_config_editor_will_update_json, addon_manager_did_install_addon, addon_manager_will_install_addon, addons_dialog_did_change_selected_addon, addons_dialog_will_delete_addons, addons_dialog_will_show, anki, annotations, aqt, audio_did_pause_or_unpause, audio_did_seek_relative
+2025-08-15T19:01:58.125036 | registered: deck_browser_will_render_content
+2025-08-15T19:01:58.125134 | registered: deck_browser_did_render
+2025-08-15T19:01:58.125183 | registered: webview_did_receive_js_message
+2025-08-15T19:01:58.125232 | registered: deck_browser_will_show_options_menu
+2025-08-15T19:01:58.125358 | legacy registered: deckBrowserWillRenderContent
+2025-08-15T19:01:58.125426 | registered: overview_did_refresh
+2025-08-15T19:01:58.125472 | legacy registered: overviewWillRender
+2025-08-15T19:01:58.125932 | _add_button: called
+2025-08-15T19:01:58.125982 | _add_button: fields links=False stats=True tree=True
+2025-08-15T19:01:58.126027 | _add_button: already present; no injection
+2025-08-15T19:01:58.127154 | _did_render: eval injected fallback button if absent
+2025-08-15T19:01:58.278152 | _on_js_message: ankiscape_log:inserted_floating
+2025-08-15T19:01:58.278384 | js: inserted_floating
+2025-08-15T19:02:00.667009 | _on_js_message: ankiscape_open_menu
+2025-08-15T19:02:04.167068 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:04.168178 | inject_overview_floating_button: eval
+2025-08-15T19:02:05.482761 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:05.483919 | inject_overview_floating_button: eval
+2025-08-15T19:02:06.516372 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:06.517371 | inject_overview_floating_button: eval
+2025-08-15T19:02:07.632950 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:07.633958 | inject_overview_floating_button: eval
+2025-08-15T19:02:10.099735 | inject_reviewer_floating_button: disabled; removed
+2025-08-15T19:02:10.100605 | inject_overview_floating_button: disabled; removed
+2025-08-15T19:02:13.116016 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:13.117074 | inject_overview_floating_button: eval
+2025-08-15T19:02:14.180951 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:14.181579 | inject_overview_floating_button: eval
+2025-08-15T19:02:15.667247 | inject_reviewer_floating_button: disabled; removed
+2025-08-15T19:02:15.668166 | inject_overview_floating_button: disabled; removed
+2025-08-15T19:02:16.549213 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:16.550138 | inject_overview_floating_button: eval
+2025-08-15T19:02:18.231795 | inject_reviewer_floating_button: eval
+2025-08-15T19:02:18.232708 | inject_overview_floating_button: eval
+2025-08-15T19:02:19.663298 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.663783 | js: review_floating_inserted
+2025-08-15T19:02:19.664101 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.664156 | js: overview_floating_inserted
+2025-08-15T19:02:19.664287 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.664334 | js: review_floating_inserted
+2025-08-15T19:02:19.664406 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.664450 | js: overview_floating_inserted
+2025-08-15T19:02:19.664524 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.664571 | js: review_floating_inserted
+2025-08-15T19:02:19.664638 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.664682 | js: overview_floating_inserted
+2025-08-15T19:02:19.664747 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.664789 | js: review_floating_inserted
+2025-08-15T19:02:19.664858 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.664901 | js: overview_floating_inserted
+2025-08-15T19:02:19.665313 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.665356 | js: review_floating_inserted
+2025-08-15T19:02:19.665437 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.665476 | js: overview_floating_inserted
+2025-08-15T19:02:19.665536 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.665574 | js: review_floating_inserted
+2025-08-15T19:02:19.665638 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.665678 | js: overview_floating_inserted
+2025-08-15T19:02:19.665743 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.665806 | js: review_floating_inserted
+2025-08-15T19:02:19.665866 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.665906 | js: overview_floating_inserted
+2025-08-15T19:02:19.665968 | _on_js_message: ankiscape_log:review_floating_inserted
+2025-08-15T19:02:19.666010 | js: review_floating_inserted
+2025-08-15T19:02:19.666069 | _on_js_message: ankiscape_log:overview_floating_inserted
+2025-08-15T19:02:19.666108 | js: overview_floating_inserted

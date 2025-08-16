@@ -8,11 +8,11 @@ class TestDeckInjectionPure(unittest.TestCase):
         self.assertIn("ankiscape-btn", out.links or "")
         self.assertTrue(out.links.endswith(ankiscape_button_html()))
 
-    def test_injects_into_tree_when_links_missing(self):
+    def test_no_injection_when_links_missing(self):
         c = DeckBrowserContent(links=None, stats=None, tree="<div>tree</div>")
         out = inject_into_deck_browser_content(c)
-        self.assertIn("ankiscape-btn", out.tree or "")
-        self.assertTrue(out.tree.endswith(ankiscape_button_html()))
+        # We avoid injecting into stats/tree to prevent overlap; unchanged
+        self.assertEqual(out.tree, "<div>tree</div>")
 
     def test_idempotent_injection(self):
         c = DeckBrowserContent(links="<div>links</div>")
