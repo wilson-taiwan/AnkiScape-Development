@@ -63,6 +63,31 @@ from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pur
 # Lightweight context for the open Main Menu to allow dynamic UI refreshes
 _MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
 
+def is_main_menu_open() -> bool:
+    """Return True if the consolidated main menu dialog is currently visible."""
+    try:
+        dlg = _MAIN_MENU_CTX.get("dialog")
+        return bool(dlg) and getattr(dlg, "isVisible", lambda: False)()
+    except Exception:
+        return False
+
+def focus_main_menu_if_open() -> bool:
+    """If the main menu is open, bring it to front and return True; otherwise False."""
+    try:
+        dlg = _MAIN_MENU_CTX.get("dialog")
+        if dlg and getattr(dlg, "isVisible", lambda: False)():
+            try:
+                if hasattr(dlg, "raise_"):
+                    dlg.raise_()
+                if hasattr(dlg, "activateWindow"):
+                    dlg.activateWindow()
+            except Exception:
+                pass
+            return True
+    except Exception:
+        pass
+    return False
+
 def refresh_skill_availability(can_smelt_any_bar: bool, can_craft_any_item: bool):
     """Auto-enable Smithing/Crafting buttons when they become available while the menu is open.
     Never auto-selects the skill; users must choose it explicitly. Only enables; does not disable.

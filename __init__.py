@@ -13,15 +13,12 @@ from .constants import (
     CRAFTED_ITEM_IMAGES,
 )
 from aqt import mw, gui_hooks
-from aqt.utils import showInfo
-from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.reviewer import Reviewer
-import json
+import time
 import random
 import os
 import datetime
-import random
 from .logic_pure import (
     calculate_probability_with_level,
     pick_gem,
@@ -36,16 +33,18 @@ from .logic_pure import (
     can_mine_ore_pure,
     can_cut_tree_pure,
 )
-from .logic import level_up_check, check_achievements
+from .logic import level_up_check, check_achievements, calculate_woodcutting_probability, calculate_mining_probability
 from .ui import (
     ExpPopup,
     show_error_message,
     show_tree_selection_dialog,
     show_ore_selection_dialog,
     refresh_skill_availability,
+    is_main_menu_open,
+    focus_main_menu_if_open,
 )
 from . import ui
-from .deck_injection_pure import DeckBrowserContent as _DBC, ankiscape_button_html, inject_into_deck_browser_content
+from .deck_injection_pure import DeckBrowserContent as _DBC, inject_into_deck_browser_content
 from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
 
 global card_turned, exp_awarded, answer_shown
@@ -68,6 +67,7 @@ def debug_log(msg: str) -> None:
 
 # Guard to avoid duplicate registrations
 _ANKISCAPE_HOOKS_REGISTERED = False
+_LAST_MENU_OPEN_TS = 0.0
 
 def show_review_popup():
     ui.show_review_popup()
@@ -93,6 +93,34 @@ def initialize_skill():
     global current_skill
     current_skill = mw.col.get_config("ankiscape_current_skill", default="None")
     ui.update_menu_visibility(current_skill)
+
+
+# --- Small helpers to reduce duplication ---
+def _show_exp(exp_gained) -> None:
+    """Ensure the ExpPopup exists and display exp."""
+    try:
+        if not hasattr(mw, 'exp_popup'):
+            mw.exp_popup = ExpPopup(mw)
+        mw.exp_popup.show_exp(exp_gained)
+    except Exception:
+        pass
+
+
+def _refresh_skill_availability() -> None:
+    """Recompute and refresh Smithing/Crafting availability in the menu."""
+    try:
+        can_craft_any = any(
+            can_craft_item_pure(
+                player_data.get("crafting_level", 1),
+                player_data.get("inventory", {}),
+                item_name,
+                CRAFTING_DATA,
+            )
+            for item_name in CRAFTING_DATA.keys()
+        )
+        refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
+    except Exception:
+        pass
 
 
 def show_skill_selection():
@@ -169,11 +197,8 @@ def on_crafting_answer():
     except Exception:
         pass
 
-    if hasattr(mw, 'exp_popup'):
-        mw.exp_popup.show_exp(exp_gained)
-    else:
-        mw.exp_popup = ExpPopup(mw)
-        mw.exp_popup.show_exp(exp_gained)
+        _refresh_skill_availability()
+        _show_exp(exp_gained)
 
 def show_bar_selection():
     selected = ui.show_bar_selection_dialog(
@@ -310,11 +335,9 @@ def on_smithing_answer():
     except Exception:
         pass
 
-    if hasattr(mw, 'exp_popup'):
-        mw.exp_popup.show_exp(exp_gained)
-    else:
-        mw.exp_popup = ExpPopup(mw)
-        mw.exp_popup.show_exp(exp_gained)
+        _refresh_skill_availability()
+        _show_exp(exp_gained)
+from .logic import calculate_woodcutting_probability, calculate_mining_probability
 
 
 def on_woodcutting_answer():
@@ -335,11 +358,7 @@ def on_woodcutting_answer():
         check_achievements(player_data)
         save_player_data()
 
-        if hasattr(mw, 'exp_popup'):
-            mw.exp_popup.show_exp(exp_gained)
-        else:
-            mw.exp_popup = ExpPopup(mw)
-            mw.exp_popup.show_exp(exp_gained)
+    _show_exp(exp_gained)
 
 
 from .logic import calculate_woodcutting_probability, calculate_mining_probability
@@ -381,21 +400,8 @@ def on_good_answer():
             save_player_data()
 
             # If the main menu is open, auto-enable Smithing/Crafting when they become possible.
-            try:
-                # Crafting availability might change if gems/bars are produced by mining flows elsewhere.
-                can_craft_any = any(
-                    can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA)
-                    for item_name in CRAFTING_DATA.keys()
-                )
-                refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
-            except Exception:
-                pass
-
-            if hasattr(mw, 'exp_popup'):
-                mw.exp_popup.show_exp(exp_gained)
-            else:
-                mw.exp_popup = ExpPopup(mw)
-                mw.exp_popup.show_exp(exp_gained)
+            _refresh_skill_availability()
+            _show_exp(exp_gained)
 
     elif current_skill == "Woodcutting":
         on_woodcutting_answer()
@@ -543,7 +549,15 @@ def _inject_reviewer_floating_button(_=None):
                 img.style.display = 'block';
                 img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
                 img.src = '__ICON_DATA_URI__';
-                btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                // Bind click handler only once to avoid duplicate pycmd messages
+                if (!btn.dataset.ankiscapeBound) {
+                    btn.addEventListener('click', function(ev){
+                        ev.preventDefault();
+                        try { pycmd('ankiscape_open_menu'); } catch(e){}
+                        return false;
+                    });
+                    btn.dataset.ankiscapeBound = '1';
+                }
                 // Ensure it sits in our wrap
                 if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
                 try { pycmd('ankiscape_log:review_floating_inserted'); } catch(e){}
@@ -630,7 +644,15 @@ def _inject_overview_floating_button(overview=None, content=None):  # matches de
                 img.style.display = 'block';
                 img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
                 img.src = '__ICON_DATA_URI__';
-                btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                // Bind click handler only once to avoid duplicate pycmd messages
+                if (!btn.dataset.ankiscapeBound) {
+                    btn.addEventListener('click', function(ev){
+                        ev.preventDefault();
+                        try { pycmd('ankiscape_open_menu'); } catch(e){}
+                        return false;
+                    });
+                    btn.dataset.ankiscapeBound = '1';
+                }
                 if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
                 try { pycmd('ankiscape_log:overview_floating_inserted'); } catch(e){}
             } catch(e) { try { pycmd('ankiscape_log:overview_js_error'); } catch(_){} }
@@ -703,6 +725,21 @@ def _register_deck_browser_button():
             debug_log(f"js: {message[len('ankiscape_log:'):]}")
             return handled
         if message == "ankiscape_open_menu":
+            # If already open, just focus it; otherwise open (with debounce)
+            try:
+                if focus_main_menu_if_open():
+                    return (True, None)
+            except Exception:
+                pass
+            try:
+                global _LAST_MENU_OPEN_TS
+                now = time.monotonic()
+                # Ignore rapid duplicate requests (e.g., multiple JS listeners)
+                if now - _LAST_MENU_OPEN_TS < 0.5:
+                    return (True, None)
+                _LAST_MENU_OPEN_TS = now
+            except Exception:
+                pass
             _on_main_menu()
             return (True, None)
         return handled
@@ -747,7 +784,14 @@ def _register_deck_browser_button():
                         img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
                         img.src = '__ICON_DATA_URI__';
                         a.appendChild(img);
-                        a.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                        if (!a.dataset.ankiscapeBound) {
+                            a.addEventListener('click', function(ev){
+                                ev.preventDefault();
+                                try { pycmd('ankiscape_open_menu'); } catch(e){}
+                                return false;
+                            });
+                            a.dataset.ankiscapeBound = '1';
+                        }
                         return a;
                     }
 
