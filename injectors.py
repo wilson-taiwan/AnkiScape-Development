@@ -13,15 +13,15 @@ except Exception:
     _hooks = None  # type: ignore
     HAS_ANKI = False
 
-# Local debug logger (avoid importing __init__ to prevent cycles)
-_DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
-
-def _debug_log(msg: str) -> None:
+# Central debug logger (no cycle; support both package and flat import in tests)
+try:
+    from .debug import debug_log as _debug_log  # type: ignore
+except Exception:
     try:
-        with open(_DEBUG_LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"{datetime.datetime.now().isoformat()} | {msg}\n")
+        from debug import debug_log as _debug_log  # type: ignore
     except Exception:
-        pass
+        def _debug_log(msg: str) -> None:  # fallback no-op
+            pass
 
 
 # --- Pure JS builders (testable) ---

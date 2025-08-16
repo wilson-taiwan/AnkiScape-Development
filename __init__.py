@@ -59,15 +59,15 @@ exp_awarded = False
 
 current_skill = "None"
 
-# --- Debug logging ---
-DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
-
-def debug_log(msg: str) -> None:
-    try:
-        with open(DEBUG_LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"{datetime.datetime.now().isoformat()} | {msg}\n")
-    except Exception:
+# --- Debug logging (centralized) ---
+from .debug import debug_log  # size-rotated, disabled by default unless ANKISCAPE_DEBUG=1
+try:
+    from .debug import set_debug_enabled as _set_debug_enabled, is_debug_enabled as _is_debug_enabled
+except Exception:
+    def _set_debug_enabled(_enabled: bool) -> None:
         pass
+    def _is_debug_enabled() -> bool:
+        return False
 
 # Guard to avoid duplicate registrations
 _ANKISCAPE_HOOKS_REGISTERED = False
@@ -97,6 +97,22 @@ def initialize_skill():
     global current_skill
     current_skill = mw.col.get_config("ankiscape_current_skill", default="None")
     ui.update_menu_visibility(current_skill)
+
+
+def _initialize_debug_from_config():
+    try:
+        enabled = False
+        if mw and getattr(mw, 'col', None):
+            # New: developer mode controls logging
+            enabled = bool(mw.col.get_config("ankiscape_developer_mode", False))
+            # Back-compat: honor previous key if present and new key missing
+            if not enabled:
+                enabled = bool(mw.col.get_config("ankiscape_debug_enabled", False))
+        _set_debug_enabled(enabled)
+        if enabled:
+            debug_log("debug: enabled from config on profile load (developer mode)")
+    except Exception:
+        pass
 
 
 # --- Small helpers to reduce duplication ---
@@ -481,6 +497,7 @@ try:
                 load_player_data,
                 initialize_exp_popup,
                 initialize_skill,
+                _initialize_debug_from_config,
                 initialize_menu,
                 (lambda: _register_deck_browser_button()),
             ],

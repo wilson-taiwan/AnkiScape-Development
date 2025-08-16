@@ -1,0 +1,7 @@
+# Ignore debug logs generated at runtime
+ankiscape_debug.log
+ankiscape_debug.log.*
+
+# Python cache
+__pycache__/
+*.pyc

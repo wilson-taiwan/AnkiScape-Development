@@ -12,3 +12,14 @@ python3 run_tests.py
 ```
 
 It discovers and runs all `tests/test_*.py` files. The script adds the repo root to `PYTHONPATH` so tests can import modules like `logic_pure` directly.
+
+## Debug logging during development
+
+This add-on now uses a centralized, rotating debug log stored next to the package as `ankiscape_debug.log`.
+Logging is disabled by default. To enable it temporarily while debugging, set an environment variable before launching Anki or running tests:
+
+- macOS/Linux (zsh): `export ANKISCAPE_DEBUG=1`
+- Windows (PowerShell): `$env:ANKISCAPE_DEBUG = '1'`
+
+The logger rotates at ~1 MB with up to 3 backups (`ankiscape_debug.log.1`, etc.).
+The log files are git-ignored and should not be shipped in releases.

@@ -61,15 +61,15 @@ from .constants import (
 )
 from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
 
-# Local debug logger to avoid import cycles
-_DEBUG_LOG_FILE = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
-
-def _debug_log(msg: str) -> None:
+# Central debug logger (support both package and flat import in tests)
+try:
+    from .debug import debug_log as _debug_log  # type: ignore
+except Exception:
     try:
-        with open(_DEBUG_LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"{datetime.datetime.now().isoformat()} | {msg}\n")
+        from debug import debug_log as _debug_log  # type: ignore
     except Exception:
-        pass
+        def _debug_log(msg: str) -> None:
+            pass
 
 # Lightweight context for the open Main Menu to allow dynamic UI refreshes
 _MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
@@ -950,8 +950,141 @@ def show_main_menu(
         rb_left.toggled.connect(lambda checked=False: checked and on_set_floating_position("left"))
         rb_right.toggled.connect(lambda checked=False: checked and on_set_floating_position("right"))
 
+    # Developer Mode controls: master toggle, reveals debug/diagnostics
+    dev_block = QWidget()
+    dev_layout = QVBoxLayout(dev_block)
+    dev_layout.setContentsMargins(0, 8, 0, 0)
+    dev_layout.setSpacing(6)
+    dev_title = QLabel("Developer Mode")
+    dev_title.setStyleSheet("font-weight: 600;")
+    dev_layout.addWidget(dev_title)
+    dev_row = QWidget()
+    drl = QHBoxLayout(dev_row)
+    drl.setContentsMargins(0, 0, 0, 0)
+    drl.setSpacing(8)
+    dev_toggle = QCheckBox("Enable developer mode (turns on debug logs)")
+    dev_enabled = False
+    try:
+        if mw and getattr(mw, 'col', None):
+            dev_enabled = bool(mw.col.get_config("ankiscape_developer_mode", False))
+            # Back-compat: migrate previous key if set
+            if not dev_enabled and bool(mw.col.get_config("ankiscape_debug_enabled", False)):
+                dev_enabled = True
+                mw.col.set_config("ankiscape_developer_mode", True)
+    except Exception:
+        dev_enabled = False
+    dev_toggle.setChecked(dev_enabled)
+    drl.addWidget(dev_toggle)
+    drl.addStretch(1)
+    dev_layout.addWidget(dev_row)
+
+    # Inner panel (shown only when developer mode enabled)
+    dev_inner = QWidget()
+    dev_inner_layout = QVBoxLayout(dev_inner)
+    dev_inner_layout.setContentsMargins(12, 6, 0, 0)
+    dev_inner_layout.setSpacing(6)
+    # Row: Clear Logs + Run Tests
+    tools_row = QWidget()
+    trl = QHBoxLayout(tools_row)
+    trl.setContentsMargins(0, 0, 0, 0)
+    trl.setSpacing(8)
+    clear_btn = QPushButton("Clear Logs")
+    run_tests_btn = QPushButton("Run Unit Tests")
+    trl.addWidget(clear_btn)
+    trl.addWidget(run_tests_btn)
+    trl.addStretch(1)
+    dev_inner_layout.addWidget(tools_row)
+
+    def _apply_dev_enabled(flag: bool):
+        try:
+            if mw and getattr(mw, 'col', None):
+                mw.col.set_config("ankiscape_developer_mode", bool(flag))
+        except Exception:
+            pass
+        # Tie developer mode to debug enablement
+        try:
+            try:
+                from .debug import set_debug_enabled  # type: ignore
+            except Exception:
+                from debug import set_debug_enabled  # type: ignore
+            set_debug_enabled(bool(flag))
+        except Exception:
+            pass
+        # Show/Hide inner panel
+        try:
+            dev_inner.setVisible(bool(flag))
+        except Exception:
+            pass
+        if flag:
+            _debug_log("developer_mode: enabled via UI")
+    dev_toggle.stateChanged.connect(lambda _=None: _apply_dev_enabled(bool(dev_toggle.isChecked())))
+
+    def _clear_logs():
+        try:
+            # Remove base and rotated files
+            base = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
+            paths = [base] + [f"{base}.{i}" for i in range(1, 6)]
+            removed_any = False
+            for p in paths:
+                try:
+                    if os.path.exists(p):
+                        os.remove(p)
+                        removed_any = True
+                except Exception:
+                    pass
+            # Feedback: lightweight message box
+            try:
+                msg = QMessageBox(mw)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Logs cleared")
+                msg.setText("Debug logs have been cleared." if removed_any else "No log files found to clear.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+            except Exception:
+                pass
+        except Exception:
+            pass
+    clear_btn.clicked.connect(_clear_logs)
+
+    def _run_tests_and_log():
+        # Run tests in-process to avoid OS handlers opening files with Anki app.
+        try:
+            _debug_log("developer_mode: running unit tests via UI (in-process)")
+            import sys, io, unittest, traceback
+            root = os.path.dirname(os.path.abspath(__file__))
+            if root not in sys.path:
+                sys.path.insert(0, root)
+            loader = unittest.TestLoader()
+            suite = loader.discover(start_dir=os.path.join(root, "tests"), pattern="test_*.py")
+            buf = io.StringIO()
+            runner = unittest.TextTestRunner(stream=buf, verbosity=2)
+            result = runner.run(suite)
+            output = buf.getvalue()
+            code = 0 if result.wasSuccessful() else 1
+            for line in output.splitlines():
+                _debug_log(f"tests: {line}")
+            _debug_log(f"developer_mode: tests finished rc={code}, failures={len(result.failures)}, errors={len(result.errors)}")
+            # User feedback
+            msg = QMessageBox(mw)
+            msg.setIcon(QMessageBox.Icon.Information if code == 0 else QMessageBox.Icon.Warning)
+            msg.setWindowTitle("Unit Tests Result")
+            msg.setText("All tests passed." if code == 0 else "Some tests failed. See debug log for details.")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+        except Exception:
+            try:
+                _debug_log("developer_mode: test run failed with exception")
+                _debug_log(traceback.format_exc())
+            except Exception:
+                pass
+    run_tests_btn.clicked.connect(_run_tests_and_log)
+
+    dev_inner.setVisible(dev_enabled)
+    dev_layout.addWidget(dev_inner)
+    set_layout.addWidget(dev_block)
+
     tabs.addTab(settings_tab, "Settings")
-    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure the AnkiScape floating button")
+    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure the AnkiScape floating button and developer tools")
 
     layout.addWidget(tabs)
 
