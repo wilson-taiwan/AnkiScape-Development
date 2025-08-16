@@ -566,6 +566,20 @@ except Exception:
                         debug_log(f"js: {message[len('ankiscape_log:'):]}")
                     except Exception:
                         pass
+                    # Not handled; allow default processing to continue
+                    return (handled, message)
+                # Hardening: do not intercept native Anki navigation messages
+                try:
+                    low = message.lower()
+                except Exception:
+                    low = ""
+                if (
+                    low.startswith("open:")
+                    or low in ("decks", "add", "browse", "stats", "sync")
+                    or low == "study" or low == "review" or low == "start"
+                    or low.startswith("study") or low.startswith("review") or low.startswith("start")
+                ):
+                    return (False, message)
         except Exception:
             debug_log("bridge: exception in _on_js_message")
             pass

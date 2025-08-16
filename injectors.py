@@ -26,6 +26,28 @@ except Exception:
 
 # --- Pure JS builders (testable) ---
 
+def should_force_pass_through(message: object) -> bool:
+    """Return True if a JS bridge message must never be marked handled.
+
+    Pure helper so unit tests can validate the allowlist contract.
+    """
+    try:
+        if not isinstance(message, str):
+            return False
+        low = message.lower()
+    except Exception:
+        return False
+    # Always allow native navigation and study actions through
+    if low.startswith("open:"):
+        return True
+    if low in ("decks", "add", "browse", "stats", "sync"):
+        return True
+    if low in ("study", "review", "start"):
+        return True
+    if low.startswith("study") or low.startswith("review") or low.startswith("start"):
+        return True
+    return False
+
 def build_reviewer_js(position: str, icon_data_uri: str) -> str:
     pos = position if position in ("left", "right") else "right"
     js = r"""
@@ -37,6 +59,8 @@ def build_reviewer_js(position: str, icon_data_uri: str) -> str:
                     wrap.id = 'ankiscape-float';
                     wrap.style.position = 'fixed';
                     wrap.style.bottom = '16px';
+                    // Ensure only the button receives events
+                    wrap.style.pointerEvents = 'none';
                     wrap.style.zIndex = '9999';
                     document.body.appendChild(wrap);
                 }
@@ -50,6 +74,8 @@ def build_reviewer_js(position: str, icon_data_uri: str) -> str:
                     btn.id = 'ankiscape-btn';
                 }
                 btn.href = '#';
+                // Re-enable pointer events on the actual button
+                btn.style.pointerEvents = 'auto';
                 btn.style.padding = '10px';
                 btn.style.border = 'none';
                 btn.style.borderRadius = '20px';
@@ -58,6 +84,14 @@ def build_reviewer_js(position: str, icon_data_uri: str) -> str:
                 btn.style.textDecoration = 'none';
                 btn.style.outline = 'none';
                 btn.style.webkitTapHighlightColor = 'transparent';
+                btn.style.cursor = 'pointer';
+                btn.style.transition = 'background 150ms ease, box-shadow 150ms ease';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.lineHeight = '0';
+        btn.style.boxSizing = 'border-box';
+        btn.style.overflow = 'hidden';
                 btn.title = 'AnkiScape';
                 var img = btn.querySelector('img');
                 if (!img) { btn.textContent = ''; img = document.createElement('img'); btn.appendChild(img); }
@@ -66,7 +100,25 @@ def build_reviewer_js(position: str, icon_data_uri: str) -> str:
                 img.style.height = '24px';
                 img.style.display = 'block';
                 img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                img.style.transition = 'transform 150ms ease';
+        img.style.transformOrigin = '50% 50%';
+        img.style.willChange = 'transform';
                 img.src = '__ICON_DATA_URI__';
+                if (!btn.dataset.ankiscapeHoverBound) {
+                    btn.addEventListener('mouseenter', function(){
+            try { img.style.transform = 'scale(1.15)'; img.style.filter = 'none'; } catch(_){}
+                        btn.style.background = 'rgba(76, 175, 80, 0.15)';
+                        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                        try { pycmd('ankiscape_log:hover_enter_reviewer'); } catch(e){}
+                    });
+                    btn.addEventListener('mouseleave', function(){
+            try { img.style.transform = 'scale(1)'; img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))'; } catch(_){}
+                        btn.style.background = 'transparent';
+                        btn.style.boxShadow = 'none';
+                        try { pycmd('ankiscape_log:hover_leave_reviewer'); } catch(e){}
+                    });
+                    btn.dataset.ankiscapeHoverBound = '1';
+                }
         if (!btn.dataset.ankiscapeBound) {
                     btn.addEventListener('click', function(ev){
                         ev.preventDefault();
@@ -95,6 +147,8 @@ def build_overview_js(position: str, icon_data_uri: str) -> str:
                     wrap.id = 'ankiscape-float';
                     wrap.style.position = 'fixed';
                     wrap.style.bottom = '16px';
+                    // Ensure only the button receives events
+                    wrap.style.pointerEvents = 'none';
                     wrap.style.zIndex = '9999';
                     document.body.appendChild(wrap);
                 }
@@ -105,6 +159,8 @@ def build_overview_js(position: str, icon_data_uri: str) -> str:
                 var btn = document.getElementById('ankiscape-btn');
                 if (!btn) { btn = document.createElement('a'); btn.id = 'ankiscape-btn'; }
                 btn.href = '#';
+                // Re-enable pointer events on the actual button
+                btn.style.pointerEvents = 'auto';
                 btn.style.padding = '10px';
                 btn.style.border = 'none';
                 btn.style.borderRadius = '20px';
@@ -113,6 +169,14 @@ def build_overview_js(position: str, icon_data_uri: str) -> str:
                 btn.style.textDecoration = 'none';
                 btn.style.outline = 'none';
                 btn.style.webkitTapHighlightColor = 'transparent';
+                btn.style.cursor = 'pointer';
+                btn.style.transition = 'background 150ms ease, box-shadow 150ms ease';
+        btn.style.display = 'inline-flex';
+        btn.style.alignItems = 'center';
+        btn.style.justifyContent = 'center';
+        btn.style.lineHeight = '0';
+        btn.style.boxSizing = 'border-box';
+        btn.style.overflow = 'hidden';
                 btn.title = 'AnkiScape';
                 var img = btn.querySelector('img');
                 if (!img) { btn.textContent=''; img = document.createElement('img'); btn.appendChild(img); }
@@ -121,7 +185,25 @@ def build_overview_js(position: str, icon_data_uri: str) -> str:
                 img.style.height = '24px';
                 img.style.display = 'block';
                 img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                img.style.transition = 'transform 150ms ease';
+        img.style.transformOrigin = '50% 50%';
+        img.style.willChange = 'transform';
                 img.src = '__ICON_DATA_URI__';
+                if (!btn.dataset.ankiscapeHoverBound) {
+                    btn.addEventListener('mouseenter', function(){
+            try { img.style.transform = 'scale(1.15)'; img.style.filter = 'none'; } catch(_){}
+                        btn.style.background = 'rgba(76, 175, 80, 0.15)';
+                        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                        try { pycmd('ankiscape_log:hover_enter_overview'); } catch(e){}
+                    });
+                    btn.addEventListener('mouseleave', function(){
+            try { img.style.transform = 'scale(1)'; img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))'; } catch(_){}
+                        btn.style.background = 'transparent';
+                        btn.style.boxShadow = 'none';
+                        try { pycmd('ankiscape_log:hover_leave_overview'); } catch(e){}
+                    });
+                    btn.dataset.ankiscapeHoverBound = '1';
+                }
         if (!btn.dataset.ankiscapeBound) {
                     btn.addEventListener('click', function(ev){
                         ev.preventDefault();
@@ -144,16 +226,53 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
     js = r"""
             (function(){
                 try {
+            function attachHover(a){
+                        try {
+                            if (!a || a.dataset.ankiscapeHoverBound) return;
+                            var img = a.querySelector('img');
+                a.style.display = 'inline-flex';
+                a.style.alignItems = 'center';
+                a.style.justifyContent = 'center';
+                            a.style.cursor = 'pointer';
+                            a.style.transition = 'background 150ms ease, box-shadow 150ms ease';
+                a.style.lineHeight = '0';
+                a.style.boxSizing = 'border-box';
+                a.style.overflow = 'hidden';
+                            if (img) { img.style.transition = 'transform 150ms ease'; }
+                if (img) { img.style.transformOrigin = '50% 50%'; img.style.willChange = 'transform'; }
+                            a.addEventListener('mouseenter', function(){
+                try { if (img) { img.style.transform = 'scale(1.15)'; img.style.filter = 'none'; } } catch(_){ }
+                                a.style.background = 'rgba(76, 175, 80, 0.15)';
+                                a.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+                                try { pycmd('ankiscape_log:hover_enter_deckbrowser'); } catch(e){}
+                            });
+                            a.addEventListener('mouseleave', function(){
+                try { if (img) { img.style.transform = 'scale(1)'; img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))'; } } catch(_){ }
+                                a.style.background = 'transparent';
+                                a.style.boxShadow = 'none';
+                                try { pycmd('ankiscape_log:hover_leave_deckbrowser'); } catch(e){}
+                            });
+                            a.dataset.ankiscapeHoverBound = '1';
+                        } catch(_){}
+                    }
                     function makeBtn(){
                         var a = document.createElement('a');
                         a.id = 'ankiscape-btn';
                         a.href = '#';
+                        // Ensure this specific button is the only interactive element if wrapped
+                        a.style.pointerEvents = 'auto';
                         a.style.marginLeft = '8px';
                         a.style.padding = '6px';
                         a.style.border = 'none';
                         a.style.borderRadius = '8px';
                         a.style.textDecoration = 'none';
                         a.style.background = 'transparent';
+            a.style.display = 'inline-flex';
+            a.style.alignItems = 'center';
+            a.style.justifyContent = 'center';
+            a.style.lineHeight = '0';
+            a.style.boxSizing = 'border-box';
+            a.style.overflow = 'hidden';
                         a.title = 'AnkiScape';
                         var img = document.createElement('img');
                         img.alt = 'AnkiScape';
@@ -161,6 +280,9 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                         img.style.height = '24px';
                         img.style.display = 'block';
                         img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                        img.style.transition = 'transform 150ms ease';
+            img.style.transformOrigin = '50% 50%';
+            img.style.willChange = 'transform';
                         img.src = '__ICON_DATA_URI__';
                         a.appendChild(img);
                         if (!a.dataset.ankiscapeBound) {
@@ -172,6 +294,7 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             });
                             a.dataset.ankiscapeBound = '1';
                         }
+                        attachHover(a);
                         return a;
                     }
 
@@ -187,8 +310,10 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             btn.textContent = '';
                             var img1 = document.createElement('img');
                             img1.alt = 'AnkiScape'; img1.style.width='24px'; img1.style.height='24px'; img1.style.display='block'; img1.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img1.style.transition='transform 150ms ease';
                             img1.src='__ICON_DATA_URI__'; btn.appendChild(img1);
                         }
+                        attachHover(btn);
                         if (last.parentElement) {
                             if (last.nextSibling) { last.parentElement.insertBefore(btn, last.nextSibling); }
                             else { last.parentElement.appendChild(btn); }
@@ -208,8 +333,10 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             btn2.textContent = '';
                             var img2 = document.createElement('img');
                             img2.alt='AnkiScape'; img2.style.width='24px'; img2.style.height='24px'; img2.style.display='block'; img2.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img2.style.transition='transform 150ms ease';
                             img2.src='__ICON_DATA_URI__'; btn2.appendChild(img2);
                         }
+                        attachHover(btn2);
                         if (rightmost.parentElement) {
                             if (rightmost.nextSibling) { rightmost.parentElement.insertBefore(btn2, rightmost.nextSibling); }
                             else { rightmost.parentElement.appendChild(btn2); }
@@ -225,8 +352,10 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             btn3.textContent = '';
                             var img3 = document.createElement('img');
                             img3.alt='AnkiScape'; img3.style.width='24px'; img3.style.height='24px'; img3.style.display='block'; img3.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img3.style.transition='transform 150ms ease';
                             img3.src='__ICON_DATA_URI__'; btn3.appendChild(img3);
                         }
+                        attachHover(btn3);
                         footer.appendChild(btn3);
                         try { pycmd('ankiscape_log:inserted_selector'); } catch(e){}
                         return;
@@ -239,6 +368,8 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             wrap.id = 'ankiscape-float';
                             wrap.style.position = 'fixed';
                             wrap.style.bottom = '16px';
+                            // Ensure only the button receives events
+                            wrap.style.pointerEvents = 'none';
                             wrap.style.zIndex = '9999';
                             document.body.appendChild(wrap);
                         }
@@ -251,8 +382,10 @@ def build_deck_browser_js(enable_floating: bool, position: str, icon_data_uri: s
                             btn.textContent = '';
                             var img4 = document.createElement('img');
                             img4.alt='AnkiScape'; img4.style.width='24px'; img4.style.height='24px'; img4.style.display='block'; img4.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img4.style.transition='transform 150ms ease';
                             img4.src='__ICON_DATA_URI__'; btn.appendChild(img4);
                         }
+                        attachHover(btn);
                         if (btn.parentElement !== wrap) { wrap.appendChild(btn); } else if (!document.getElementById('ankiscape-btn')) { wrap.appendChild(btn); }
                         try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
                     }
@@ -420,15 +553,21 @@ def register_deck_browser_button() -> None:
                                         _debug_log(f"injectors.bridge: failed to dispatch open: {e}")
                                 else:
                                     _debug_log("injectors.bridge: _on_main_menu not found on package module")
+                        # We handled this custom message; signal handled
                         return (True, message)
                     except Exception as e:
                         _debug_log(f"injectors.bridge: error handling open_menu: {e}")
                         return (handled, message)
                 if message.startswith("ankiscape_log:"):
                     _debug_log(f"js: {message[len('ankiscape_log:'):]}")
+                    # Not handled; allow default processing to continue
                     return (handled, message)
+                # Hardening: ensure native navigation/study messages pass through unhandled
+                if should_force_pass_through(message):
+                    return (False, message)
         except Exception as e:
             _debug_log(f"injectors.bridge: handler exception: {e}")
+        # Pass through for all other messages unchanged
         return (handled, message)
 
     def _did_render(deck_browser):  # type: ignore[no-redef]
