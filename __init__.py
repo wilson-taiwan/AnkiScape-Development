@@ -488,6 +488,13 @@ def _on_rev_show_question(*_args, **_kwargs):
 def _on_rev_show_answer(*_args, **_kwargs):
     _inject_reviewer_floating_button()
 
+# Ensure the floating button is injected on the deck Overview as it refreshes
+def _on_overview_did_refresh(overview):
+    try:
+        _inject_overview_floating_button(overview)
+    except Exception:
+        pass
+
 # Centralized hook registration
 try:
     from . import hooks as _hooks
@@ -506,6 +513,38 @@ try:
             "answer_wrapper": on_answer_card,
         }
     )
+    # Overview: inject after refresh so the icon is always present on the Study Now screen
+    try:
+        try:
+            gui_hooks.overview_did_refresh.remove(_on_overview_did_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        gui_hooks.overview_did_refresh.append(_on_overview_did_refresh)  # type: ignore[attr-defined]
+    except Exception:
+        # Fallback for environments without overview_did_refresh: defer after will_refresh
+        try:
+            from aqt.qt import QTimer  # type: ignore
+        except Exception:
+            QTimer = None  # type: ignore
+        def _on_overview_will_refresh(overview):
+            if QTimer is not None:
+                try:
+                    QTimer.singleShot(0, lambda: _inject_overview_floating_button(overview))
+                except Exception:
+                    pass
+            else:
+                try:
+                    _inject_overview_floating_button(overview)
+                except Exception:
+                    pass
+        try:
+            try:
+                gui_hooks.overview_will_refresh.remove(_on_overview_will_refresh)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            gui_hooks.overview_will_refresh.append(_on_overview_will_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
 except Exception:
     # Fallback: in case hooks module import fails, keep behavior by direct registration
     try:
@@ -523,6 +562,15 @@ except Exception:
         gui_hooks.reviewer_did_show_question.append(_on_rev_show_question)
         gui_hooks.reviewer_did_show_answer.append(_on_rev_show_answer)
         Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
+        # Overview: inject after refresh so the icon is always present on the Study Now screen
+        try:
+            try:
+                gui_hooks.overview_did_refresh.remove(_on_overview_did_refresh)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            gui_hooks.overview_did_refresh.append(_on_overview_did_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
     except Exception:
         pass
 
