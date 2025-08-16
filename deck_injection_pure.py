@@ -3,12 +3,24 @@ These do not import Anki modules and can be unit-tested.
 """
 from dataclasses import dataclass
 from typing import Optional
+import os
+import base64
 
-BUTTON_HTML = (
-    '<span id="ankiscape-btn-wrap" style="margin-left:8px">'
-    '<a id="ankiscape-btn" href="#" style="padding:2px 6px; border-radius:6px; border:1px solid #ccc; text-decoration:none;" onclick="pycmd(\'ankiscape_open_menu\'); return false;">AnkiScape</a>'
-    '</span>'
-)
+_ICON_DATA_URI = None
+
+def _get_icon_data_uri() -> Optional[str]:
+    global _ICON_DATA_URI
+    if _ICON_DATA_URI is not None:
+        return _ICON_DATA_URI
+    try:
+        icon_path = os.path.join(os.path.dirname(__file__), "icon", "stats_icon.png")
+        with open(icon_path, "rb") as f:
+            b64 = base64.b64encode(f.read()).decode("ascii")
+            _ICON_DATA_URI = f"data:image/png;base64,{b64}"
+            return _ICON_DATA_URI
+    except Exception:
+        _ICON_DATA_URI = None
+        return None
 
 @dataclass
 class DeckBrowserContent:
@@ -20,7 +32,23 @@ class DeckBrowserContent:
 
 
 def ankiscape_button_html() -> str:
-    return BUTTON_HTML
+    icon = _get_icon_data_uri()
+    if icon:
+        return (
+            '<span id="ankiscape-btn-wrap" style="margin-left:8px">'
+            '<a id="ankiscape-btn" href="#" title="AnkiScape" aria-label="AnkiScape" '
+            'style="display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:6px; text-decoration:none; background:transparent; border:none;">'
+            f'<img src="{icon}" alt="AnkiScape" style="width:24px; height:24px; display:block; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25));" />'
+            '</a>'
+            '</span>'
+        )
+    else:
+        return (
+            '<span id="ankiscape-btn-wrap" style="margin-left:8px">'
+            '<a id="ankiscape-btn" href="#" style="padding:6px; text-decoration:none; background:transparent; border:none;" '
+            'title="AnkiScape" aria-label="AnkiScape">AnkiScape</a>'
+            '</span>'
+        )
 
 
 def inject_into_deck_browser_content(content: DeckBrowserContent) -> DeckBrowserContent:
@@ -28,6 +56,6 @@ def inject_into_deck_browser_content(content: DeckBrowserContent) -> DeckBrowser
     We intentionally avoid stats/tree to prevent overlap with Heatmap or deck list.
     """
     if content.links is not None and "ankiscape-btn" not in content.links:
-        content.links = (content.links or "") + BUTTON_HTML
+        content.links = (content.links or "") + ankiscape_button_html()
         return content
     return content

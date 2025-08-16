@@ -523,25 +523,40 @@ def _inject_reviewer_floating_button(_=None):
                 if (!btn) {
                     btn = document.createElement('a');
                     btn.id = 'ankiscape-btn';
-                    btn.href = '#';
-                    btn.style.padding = '8px 12px';
-                    btn.style.border = '1px solid #ccc';
-                    btn.style.borderRadius = '18px';
-                    btn.style.background = '#fff';
-                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.15)';
-                    btn.style.textDecoration = 'none';
-                    btn.textContent = 'AnkiScape';
-                    btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
-                    wrap.appendChild(btn);
-                } else {
-                    // Ensure it sits in our wrap
-                    if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
                 }
+                // Normalize styles/content (icon-only)
+                btn.href = '#';
+                btn.style.padding = '10px';
+                btn.style.border = 'none';
+                btn.style.borderRadius = '20px';
+                btn.style.background = 'transparent';
+                btn.style.boxShadow = 'none';
+                btn.style.textDecoration = 'none';
+                btn.style.outline = 'none';
+                btn.style.webkitTapHighlightColor = 'transparent';
+                btn.title = 'AnkiScape';
+                var img = btn.querySelector('img');
+                if (!img) { btn.textContent = ''; img = document.createElement('img'); btn.appendChild(img); }
+                img.alt = 'AnkiScape';
+                img.style.width = '24px';
+                img.style.height = '24px';
+                img.style.display = 'block';
+                img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                img.src = '__ICON_DATA_URI__';
+                btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                // Ensure it sits in our wrap
+                if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
                 try { pycmd('ankiscape_log:review_floating_inserted'); } catch(e){}
             } catch(e) { try { pycmd('ankiscape_log:review_js_error'); } catch(_){} }
         })();
         """
-        js = js.replace("__POS__", pos)
+        # Embed icon data URI for the floating pill
+        try:
+            from .deck_injection_pure import _get_icon_data_uri
+            icon_uri = _get_icon_data_uri() or ''
+        except Exception:
+            icon_uri = ''
+        js = js.replace("__POS__", pos).replace("__ICON_DATA_URI__", icon_uri)
         debug_log("inject_reviewer_floating_button: eval")
         mw.reviewer.web.eval(js)
     except Exception:
@@ -595,27 +610,38 @@ def _inject_overview_floating_button(overview=None, content=None):  # matches de
                 if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
 
                 var btn = document.getElementById('ankiscape-btn');
-                if (!btn) {
-                    btn = document.createElement('a');
-                    btn.id = 'ankiscape-btn';
-                    btn.href = '#';
-                    btn.style.padding = '8px 12px';
-                    btn.style.border = '1px solid #ccc';
-                    btn.style.borderRadius = '18px';
-                    btn.style.background = '#fff';
-                    btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.15)';
-                    btn.style.textDecoration = 'none';
-                    btn.textContent = 'AnkiScape';
-                    btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
-                    wrap.appendChild(btn);
-                } else {
-                    if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
-                }
+                if (!btn) { btn = document.createElement('a'); btn.id = 'ankiscape-btn'; }
+                // Normalize to icon-only style
+                btn.href = '#';
+                btn.style.padding = '10px';
+                btn.style.border = 'none';
+                btn.style.borderRadius = '20px';
+                btn.style.background = 'transparent';
+                btn.style.boxShadow = 'none';
+                btn.style.textDecoration = 'none';
+                btn.style.outline = 'none';
+                btn.style.webkitTapHighlightColor = 'transparent';
+                btn.title = 'AnkiScape';
+                var img = btn.querySelector('img');
+                if (!img) { btn.textContent=''; img = document.createElement('img'); btn.appendChild(img); }
+                img.alt = 'AnkiScape';
+                img.style.width = '24px';
+                img.style.height = '24px';
+                img.style.display = 'block';
+                img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                img.src = '__ICON_DATA_URI__';
+                btn.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
+                if (btn.parentElement !== wrap) { wrap.appendChild(btn); }
                 try { pycmd('ankiscape_log:overview_floating_inserted'); } catch(e){}
             } catch(e) { try { pycmd('ankiscape_log:overview_js_error'); } catch(_){} }
         })();
         """
-        js = js.replace("__POS__", pos)
+        try:
+            from .deck_injection_pure import _get_icon_data_uri
+            icon_uri = _get_icon_data_uri() or ''
+        except Exception:
+            icon_uri = ''
+        js = js.replace("__POS__", pos).replace("__ICON_DATA_URI__", icon_uri)
         debug_log("inject_overview_floating_button: eval")
         web.eval(js)
     except Exception:
@@ -692,6 +718,12 @@ def _register_deck_browser_button():
                 float_pos = p if p in ('left','right') else 'right'
             except Exception:
                 pass
+            # Resolve icon data URI
+            try:
+                from .deck_injection_pure import _get_icon_data_uri
+                _icon_uri = _get_icon_data_uri() or ''
+            except Exception:
+                _icon_uri = ''
             js = r"""
             (function(){
                 try {
@@ -701,11 +733,20 @@ def _register_deck_browser_button():
                         a.id = 'ankiscape-btn';
                         a.href = '#';
                         a.style.marginLeft = '8px';
-                        a.style.padding = '4px 10px';
-                        a.style.border = '1px solid #ccc';
-                        a.style.borderRadius = '6px';
+                        a.style.padding = '6px';
+                        a.style.border = 'none';
+                        a.style.borderRadius = '8px';
                         a.style.textDecoration = 'none';
-                        a.textContent = 'AnkiScape';
+                        a.style.background = 'transparent';
+                        a.title = 'AnkiScape';
+                        var img = document.createElement('img');
+                        img.alt = 'AnkiScape';
+                        img.style.width = '24px';
+                        img.style.height = '24px';
+                        img.style.display = 'block';
+                        img.style.filter = 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                        img.src = '__ICON_DATA_URI__';
+                        a.appendChild(img);
                         a.addEventListener('click', function(ev){ ev.preventDefault(); try { pycmd('ankiscape_open_menu'); } catch(e){} return false; });
                         return a;
                     }
@@ -718,7 +759,14 @@ def _register_deck_browser_button():
                     });
                     if (actions.length) {
                         var last = actions[actions.length - 1];
-                        var btn = makeBtn();
+                        var btn = document.getElementById('ankiscape-btn') || makeBtn();
+                        // If existing button lacks an img, replace its contents
+                        if (!btn.querySelector('img')) {
+                            btn.textContent = '';
+                            var img1 = document.createElement('img');
+                            img1.alt = 'AnkiScape'; img1.style.width='24px'; img1.style.height='24px'; img1.style.display='block'; img1.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img1.src='__ICON_DATA_URI__'; btn.appendChild(img1);
+                        }
                         if (last.parentElement) {
                             if (last.nextSibling) {
                                 last.parentElement.insertBefore(btn, last.nextSibling);
@@ -738,7 +786,13 @@ def _register_deck_browser_button():
                     if (topAnchors.length) {
                         // Find the rightmost among these
                         var rightmost = topAnchors[topAnchors.length - 1];
-                        var btn2 = makeBtn();
+                        var btn2 = document.getElementById('ankiscape-btn') || makeBtn();
+                        if (!btn2.querySelector('img')) {
+                            btn2.textContent = '';
+                            var img2 = document.createElement('img');
+                            img2.alt='AnkiScape'; img2.style.width='24px'; img2.style.height='24px'; img2.style.display='block'; img2.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img2.src='__ICON_DATA_URI__'; btn2.appendChild(img2);
+                        }
                         if (rightmost.parentElement) {
                             if (rightmost.nextSibling) {
                                 rightmost.parentElement.insertBefore(btn2, rightmost.nextSibling);
@@ -753,7 +807,14 @@ def _register_deck_browser_button():
                     // 3) Fallback: try known footer selectors
                     var footer = document.querySelector('.links') || document.querySelector('#links') || null;
                     if (footer) {
-                        footer.appendChild(makeBtn());
+                        var btn3 = document.getElementById('ankiscape-btn') || makeBtn();
+                        if (!btn3.querySelector('img')) {
+                            btn3.textContent = '';
+                            var img3 = document.createElement('img');
+                            img3.alt='AnkiScape'; img3.style.width='24px'; img3.style.height='24px'; img3.style.display='block'; img3.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img3.src='__ICON_DATA_URI__'; btn3.appendChild(img3);
+                        }
+                        footer.appendChild(btn3);
                         try { pycmd('ankiscape_log:inserted_selector'); } catch(e){}
                         return;
                     }
@@ -776,6 +837,12 @@ def _register_deck_browser_button():
                         if ('__POS__' === 'left') { wrap.style.left = '16px'; } else { wrap.style.right = '16px'; }
                         var btn = document.getElementById('ankiscape-btn');
                         if (!btn) { btn = makeBtn(); }
+                        if (!btn.querySelector('img')) {
+                            btn.textContent = '';
+                            var img4 = document.createElement('img');
+                            img4.alt='AnkiScape'; img4.style.width='24px'; img4.style.height='24px'; img4.style.display='block'; img4.style.filter='drop-shadow(0 1px 1px rgba(0,0,0,0.25))';
+                            img4.src='__ICON_DATA_URI__'; btn.appendChild(img4);
+                        }
                         if (btn.parentElement !== wrap) { wrap.appendChild(btn); } else if (!document.getElementById('ankiscape-btn')) { wrap.appendChild(btn); }
                         try { pycmd('ankiscape_log:inserted_floating'); } catch(e){}
                     }
@@ -784,7 +851,7 @@ def _register_deck_browser_button():
                 }
             })();
             """
-            js = js.replace("__ENABLE_FLOATING__", "true" if enable_floating else "false").replace("__POS__", float_pos)
+            js = js.replace("__ENABLE_FLOATING__", "true" if enable_floating else "false").replace("__POS__", float_pos).replace("__ICON_DATA_URI__", _icon_uri)
             deck_browser.web.eval(js)
             debug_log("_did_render: eval injected fallback button if absent")
         except Exception:
