@@ -42,6 +42,9 @@ from .ui import (
     refresh_skill_availability,
     is_main_menu_open,
     focus_main_menu_if_open,
+    ensure_review_hud,
+    update_review_hud,
+    hide_review_hud,
 )
 from . import ui
 from .deck_injection_pure import DeckBrowserContent as _DBC, inject_into_deck_browser_content
@@ -122,6 +125,11 @@ def _show_exp(exp_gained) -> None:
         if not hasattr(mw, 'exp_popup'):
             mw.exp_popup = ExpPopup(mw)
         mw.exp_popup.show_exp(exp_gained)
+        # Keep HUD progress in sync with new XP
+        try:
+            update_review_hud(player_data, current_skill)
+        except Exception:
+            pass
     except Exception:
         pass
 
@@ -160,6 +168,11 @@ def save_skill(skill, dialog):
         # Persist immediately so the selection survives window close
         try:
             mw.col.set_config("ankiscape_current_skill", current_skill)
+        except Exception:
+            pass
+        # Update the HUD immediately so users see the new skill progress without waiting for XP
+        try:
+            update_review_hud(player_data, current_skill)
         except Exception:
             pass
         if dialog:
@@ -455,11 +468,22 @@ def on_card_did_show(card):
     card_turned = True
     exp_awarded = False
     answer_shown = False
+    # Ensure/update HUD when a review card is shown
+    try:
+        ensure_review_hud()
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 
 def on_show_answer(reviewer):
     global answer_shown
     answer_shown = True
+    # Keep HUD in sync when flipping
+    try:
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 
 ## show_error_message now provided by ui.show_error_message
@@ -484,14 +508,29 @@ def initialize_exp_popup():
 # Flexible wrappers to handle version differences in hook signatures
 def _on_rev_show_question(*_args, **_kwargs):
     _inject_reviewer_floating_button()
+    try:
+        ensure_review_hud()
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 def _on_rev_show_answer(*_args, **_kwargs):
     _inject_reviewer_floating_button()
+    try:
+        ensure_review_hud()
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 # Ensure the floating button is injected on the deck Overview as it refreshes
 def _on_overview_did_refresh(overview):
     try:
         _inject_overview_floating_button(overview)
+    except Exception:
+        pass
+    # Hide HUD off the review screen
+    try:
+        hide_review_hud()
     except Exception:
         pass
 

@@ -37,6 +37,7 @@ try:
         QCheckBox,
         QDesktopServices,
         QUrl,
+    QEvent,
     )
     HAS_QT = True
 except Exception:
@@ -44,22 +45,43 @@ except Exception:
     mw = None  # type: ignore
     HAS_QT = False
 
-from .constants import (
-    EXP_TABLE,
-    ORE_DATA,
-    TREE_DATA,
-    BAR_DATA,
-    GEM_DATA,
-    CRAFTING_DATA,
-    ORE_IMAGES,
-    TREE_IMAGES,
-    BAR_IMAGES,
-    GEM_IMAGES,
-    CRAFTED_ITEM_IMAGES,
-    ACHIEVEMENTS,
-    current_dir,
-)
-from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+try:
+    from .constants import (
+        EXP_TABLE,
+        ORE_DATA,
+        TREE_DATA,
+        BAR_DATA,
+        GEM_DATA,
+        CRAFTING_DATA,
+        ORE_IMAGES,
+        TREE_IMAGES,
+        BAR_IMAGES,
+        GEM_IMAGES,
+        CRAFTED_ITEM_IMAGES,
+        ACHIEVEMENTS,
+        current_dir,
+    )
+except Exception:
+    # Fallback for direct module import in tests
+    from constants import (  # type: ignore
+        EXP_TABLE,
+        ORE_DATA,
+        TREE_DATA,
+        BAR_DATA,
+        GEM_DATA,
+        CRAFTING_DATA,
+        ORE_IMAGES,
+        TREE_IMAGES,
+        BAR_IMAGES,
+        GEM_IMAGES,
+        CRAFTED_ITEM_IMAGES,
+        ACHIEVEMENTS,
+        current_dir,
+    )
+try:
+    from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+except Exception:
+    from logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure  # type: ignore
 
 # Central debug logger (support both package and flat import in tests)
 try:
@@ -123,40 +145,280 @@ def refresh_skill_availability(can_smelt_any_bar: bool, can_craft_any_item: bool
         pass
 
 
+def compute_level_progress(level: int, exp: float, exp_table: list) -> tuple[int, float, int]:
+    """Pure helper for computing percent, remaining XP, and target level.
+    Returns (percent, xp_remaining, target_level). Clamps values sensibly.
+    - At max level (99 or end of table), always return 100% and 0 remaining.
+    """
+    try:
+        lvl = max(1, int(level))
+        xp = float(exp or 0)
+        table_len = len(exp_table)
+
+        # If at or above the maximum supported level, treat progress as complete.
+        # Many games cap at 99; also guard when lvl maps to the last index of the table.
+        if lvl >= 99 or lvl >= table_len:
+            return 100, 0.0, 99
+
+        # Compute thresholds for the current level segment
+        prev = float(exp_table[lvl - 1]) if (lvl - 1) < table_len else 0.0
+        nxt = float(exp_table[lvl]) if lvl < table_len else prev
+
+        # If thresholds are degenerate (e.g., at end), treat as maxed
+        if nxt <= prev:
+            return 100, 0.0, 99
+
+        # Clamp percent to [0, 100] and remaining to >= 0
+        span = nxt - prev
+        pct_float = ((xp - prev) / span) * 100.0
+        if xp >= nxt:
+            pct = 100
+            remain = 0.0
+        else:
+            pct = int(max(0.0, min(100.0, pct_float)))
+            remain = max(0.0, nxt - xp)
+
+        target_lv = min(lvl + 1, 99)
+        return pct, remain, target_lv
+    except Exception:
+        # Fallback on error: show safe defaults and a reasonable next target
+        try:
+            safe_lvl = max(1, int(level))
+        except Exception:
+            safe_lvl = 1
+        return 0, 0.0, min(safe_lvl + 1, 99)
+
+
 # UI Classes
 if HAS_QT:
+    # Shared HUD theme
+    _HUD_ACCENT = "#4CAF50"  # Material green
+    _HUD_BG = "rgba(20, 20, 20, 180)"
+    _HUD_BORDER = "rgba(255, 255, 255, 60)"
+
+    class ReviewHUD(QWidget):
+        """A compact overlay shown on the review screen (lower center).
+        Displays current skill (icon + name), level, and progress to next level.
+        """
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+            self.setAutoFillBackground(False)
+            self.setObjectName("AnkiScapeReviewHUD")
+
+            # Layout
+            root = QHBoxLayout(self)
+            root.setContentsMargins(12, 10, 12, 10)
+            root.setSpacing(10)
+
+            self.icon_lbl = QLabel()
+            self.icon_lbl.setFixedSize(28, 28)
+            root.addWidget(self.icon_lbl, 0, Qt.AlignmentFlag.AlignVCenter)
+
+            info = QVBoxLayout()
+            info.setContentsMargins(0, 0, 0, 0)
+            info.setSpacing(4)
+            self.title_lbl = QLabel("Skill")
+            self.title_lbl.setStyleSheet("color: white; font-weight: 600;")
+            info.addWidget(self.title_lbl)
+
+            # Progress row
+            self.progress = QProgressBar()
+            self.progress.setTextVisible(False)
+            self.progress.setFixedHeight(12)
+            self.progress.setRange(0, 100)
+            self.progress.setValue(0)
+            self.progress.setStyleSheet(
+                f"""
+                QProgressBar {{
+                    background-color: rgba(255,255,255,0.15);
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 6px;
+                }}
+                QProgressBar::chunk {{
+                    background-color: {_HUD_ACCENT};
+                    border-radius: 5px;
+                }}
+                """
+            )
+            info.addWidget(self.progress)
+
+            self.sub_lbl = QLabel("")
+            self.sub_lbl.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 11px;")
+            info.addWidget(self.sub_lbl)
+
+            root.addLayout(info, 1)
+
+            # Aesthetic container style
+            self.setStyleSheet(
+                f"""
+                QWidget#AnkiScapeReviewHUD {{
+                    background: {_HUD_BG};
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 10px;
+                }}
+                """
+            )
+
+            # Shadow for better contrast if available
+            try:
+                from aqt.qt import QGraphicsDropShadowEffect  # type: ignore
+                shadow = QGraphicsDropShadowEffect(self)
+                shadow.setBlurRadius(18)
+                shadow.setOffset(0, 2)
+                shadow.setColor(Qt.GlobalColor.black)
+                self.setGraphicsEffect(shadow)
+            except Exception:
+                pass
+
+            # Track parent resize/move to keep position
+            try:
+                if parent is not None:
+                    parent.installEventFilter(self)
+            except Exception:
+                pass
+
+            self.hide()
+
+        def _skill_icon_path(self, skill: str) -> Optional[str]:
+            icon_map = {
+                "Mining": "mining_icon.png",
+                "Woodcutting": "woodcutting_icon.png",
+                "Smithing": "smithing_icon.png",
+                "Crafting": "crafting_icon.png",
+            }
+            fname = icon_map.get(skill)
+            if not fname:
+                return None
+            p = os.path.join(current_dir, "icon", fname)
+            return p if os.path.exists(p) else None
+
+        def _placeholder_icon_path(self) -> Optional[str]:
+            p = os.path.join(current_dir, "crafteditems", "None.png")
+            return p if os.path.exists(p) else None
+
+        def set_data(self, player_data: dict, skill: str) -> None:
+            """Update HUD content from player data and currently active skill."""
+            skill = skill or "None"
+            if skill not in ("Mining", "Woodcutting", "Smithing", "Crafting"):
+                # No skill selected: show placeholder state
+                ip = self._placeholder_icon_path()
+                if ip:
+                    pm = QPixmap(ip)
+                    self.icon_lbl.setPixmap(pm.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                else:
+                    self.icon_lbl.clear()
+                self.title_lbl.setText("No skill selected")
+                self.progress.setValue(0)
+                self.sub_lbl.setText("Open AnkiScape menu to choose a skill")
+                self.adjustSize()
+                self._reposition()
+                self.show()
+                return
+
+            # Icon
+            ip = self._skill_icon_path(skill)
+            if ip:
+                pm = QPixmap(ip)
+                self.icon_lbl.setPixmap(pm.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            else:
+                self.icon_lbl.clear()
+
+            level_key = f"{skill.lower()}_level"
+            exp_key = f"{skill.lower()}_exp"
+            level = int(player_data.get(level_key, 1) or 1)
+            exp = float(player_data.get(exp_key, 0) or 0)
+            self.title_lbl.setText(f"{skill} — Lv {level}")
+
+            # Compute progress within current level via pure helper
+            pct, remain, target_lv = compute_level_progress(level, exp, EXP_TABLE)
+            self.progress.setValue(pct)
+            self.sub_lbl.setText(f"{pct}% to Lv {target_lv} • {remain:,.0f} XP to next")
+
+            self.adjustSize()
+            self._reposition()
+            self.show()
+
+        def _reposition(self) -> None:
+            try:
+                par = self.parent() if self.parent() is not None else mw
+                if par is None:
+                    return
+                pw = par.width()
+                ph = par.height()
+                self.adjustSize()
+                w = min(max(self.width(), 360), 520)
+                h = self.height()
+                x = int((pw - w) / 2)
+                # Keep clear of bottom actions/status; give more breathing room
+                y = int(ph - h - 72)
+                self.setFixedWidth(w)
+                self.move(x, y)
+            except Exception:
+                pass
+
+        def eventFilter(self, obj, event):  # type: ignore[override]
+            try:
+                et = event.type()
+                if et in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
+                    self._reposition()
+            except Exception:
+                pass
+            return False
+
     class ExpPopup(QLabel):
+        """Floating XP indicator that fades and floats above the HUD (lower center)."""
         def __init__(self, parent):
             super().__init__(parent)
             self.setStyleSheet(
+                f"""
+                QLabel {{
+                    background: {_HUD_BG};
+                    color: white;
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 10px;
+                    padding: 6px 10px;
+                    font-weight: 700;
+                }}
                 """
-            background-color: rgba(70, 130, 180, 200);
-            color: white;
-            border-radius: 10px;
-            padding: 5px;
-            font-weight: bold;
-        """
             )
             self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             self.hide()
 
         def show_exp(self, exp):
-            self.setText(f"+{exp} XP")
+            # Format like +25 XP, color accent via left border
+            self.setText(f"+{int(exp)} XP")
             self.adjustSize()
             self.show()
-            self.move(self.parent().width() - self.width() - 20, self.parent().height() - 100)
+
+            # Position: centered horizontally, just above the HUD
+            try:
+                par = self.parent() if self.parent() is not None else mw
+                hud = _REVIEW_HUD
+                base_y = (hud.y() - 14) if (hud and hud.isVisible()) else (par.height() - 140)
+                x = int((par.width() - self.width()) / 2)
+                y = int(base_y)
+                self.move(x, y)
+            except Exception:
+                # Fallback to lower center
+                self.move(max(10, int((self.parent().width() - self.width()) / 2)), self.parent().height() - 140)
+
+            # Animations
             self.opacity_effect = QGraphicsOpacityEffect(self)
             self.setGraphicsEffect(self.opacity_effect)
             self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
-            self.fade_animation.setDuration(2000)
+            self.fade_animation.setDuration(1800)
             self.fade_animation.setStartValue(1.0)
             self.fade_animation.setEndValue(0.0)
             self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
             self.fade_animation.finished.connect(self.hide)
+
             self.float_animation = QPropertyAnimation(self, b"pos")
-            self.float_animation.setDuration(2000)
+            self.float_animation.setDuration(1800)
             start_pos = self.pos()
-            end_pos = start_pos - QPoint(0, 50)
+            end_pos = start_pos - QPoint(0, 36)
             self.float_animation.setStartValue(start_pos)
             self.float_animation.setEndValue(end_pos)
             self.float_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -171,9 +433,56 @@ else:
         def show_exp(self, exp):
             pass
 
+    class ReviewHUD:
+        def __init__(self, parent=None):
+            pass
+        def set_data(self, player_data: dict, skill: str) -> None:
+            pass
+
 # UI Functions
 # ...existing code...
 # Move all dialog, popup, and menu functions here from __init__.py
+
+# --- Review HUD management ---
+_REVIEW_HUD = None  # type: ignore
+
+def ensure_review_hud() -> None:
+    """Create the Review HUD if missing and attach to mw."""
+    global _REVIEW_HUD
+    try:
+        if not HAS_QT:
+            return
+        if _REVIEW_HUD is None:
+            parent = mw
+            if parent is None:
+                return
+            _REVIEW_HUD = ReviewHUD(parent)
+        # ensure on top and visible (content set by update call)
+        try:
+            _REVIEW_HUD.raise_()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+def update_review_hud(player_data: dict, current_skill: str) -> None:
+    """Update and show the Review HUD based on current data."""
+    try:
+        if not HAS_QT:
+            return
+        ensure_review_hud()
+        if _REVIEW_HUD is not None:
+            _REVIEW_HUD.set_data(player_data, current_skill)
+    except Exception:
+        pass
+
+def hide_review_hud() -> None:
+    """Hide the HUD if it exists (used outside of review screens)."""
+    try:
+        if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+            _REVIEW_HUD.hide()
+    except Exception:
+        pass
 
 def show_error_message(title: str, message: str):
     """Centralized error dialog helper."""

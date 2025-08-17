@@ -572,6 +572,11 @@ def register_deck_browser_button() -> None:
 
     def _did_render(deck_browser):  # type: ignore[no-redef]
         try:
+            try:
+                from .ui import hide_review_hud  # lazy import to avoid cycles
+                hide_review_hud()
+            except Exception:
+                pass
             enable_floating = True
             float_pos = 'right'
             try:
