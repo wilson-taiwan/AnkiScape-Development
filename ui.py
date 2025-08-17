@@ -96,6 +96,25 @@ except Exception:
 # Lightweight context for the open Main Menu to allow dynamic UI refreshes
 _MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
 
+def get_config_bool(key: str, default: bool = True) -> bool:
+    """Safely read a boolean config from Anki's profile; fallback to default when unavailable.
+    This helper avoids importing aqt in callers and is easy to monkeypatch in tests.
+    """
+    try:
+        if mw and getattr(mw, 'col', None):
+            return bool(mw.col.get_config(key, default))
+    except Exception:
+        pass
+    return bool(default)
+
+def is_floating_xp_enabled() -> bool:
+    """Return True if floating XP popups are enabled (default True)."""
+    return get_config_bool("ankiscape_floating_xp_enabled", True)
+
+def is_popups_enabled() -> bool:
+    """Return True if achievement/level-up popups are enabled (default True)."""
+    return get_config_bool("ankiscape_popups_enabled", True)
+
 def is_main_menu_open() -> bool:
     """Return True if the consolidated main menu dialog is currently visible."""
     try:
@@ -312,6 +331,12 @@ if HAS_QT:
                 self.title_lbl.setText("No skill selected")
                 self.progress.setValue(0)
                 self.sub_lbl.setText("Open AnkiScape menu to choose a skill")
+                # Always show progress/subtext when HUD is enabled
+                try:
+                    self.progress.setVisible(True)
+                    self.sub_lbl.setVisible(True)
+                except Exception:
+                    pass
                 self.adjustSize()
                 self._reposition()
                 self.show()
@@ -335,6 +360,13 @@ if HAS_QT:
             pct, remain, target_lv = compute_level_progress(level, exp, EXP_TABLE)
             self.progress.setValue(pct)
             self.sub_lbl.setText(f"{pct}% to Lv {target_lv} • {remain:,.0f} XP to next")
+
+            # Always show progress/subtext when HUD is enabled
+            try:
+                self.progress.setVisible(True)
+                self.sub_lbl.setVisible(True)
+            except Exception:
+                pass
 
             self.adjustSize()
             self._reposition()
@@ -469,6 +501,14 @@ def update_review_hud(player_data: dict, current_skill: str) -> None:
     """Update and show the Review HUD based on current data."""
     try:
         if not HAS_QT:
+            return
+        # Respect setting to fully disable the review HUD visuals
+        if not get_config_bool("ankiscape_review_hud_enabled", True):
+            try:
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+                    _REVIEW_HUD.hide()
+            except Exception:
+                pass
             return
         ensure_review_hud()
         if _REVIEW_HUD is not None:
@@ -1206,25 +1246,49 @@ def show_main_menu(
         tabs.setTabIcon(tabs.indexOf(ach_tab), QIcon(ach_icon_path))
     tabs.setTabToolTip(tabs.indexOf(ach_tab), "Review your achievements")
 
-    # Settings tab (floating pill controls)
+    # Settings tab (controls)
     settings_tab = QWidget()
     set_layout = QVBoxLayout(settings_tab)
     set_layout.setContentsMargins(12, 12, 12, 12)
     set_layout.setSpacing(10)
-    set_layout.addWidget(QLabel("Floating Button"))
 
     # Load current settings (safe defaults if config unavailable)
     floating_enabled = True
     floating_position = "right"
+    floating_xp_enabled = True
+    popups_enabled = True
+    review_hud_enabled = True
     try:
         if mw and getattr(mw, 'col', None):
             floating_enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
             pos = mw.col.get_config("ankiscape_floating_position", "right")
             floating_position = pos if pos in ("left", "right") else "right"
+        floating_xp_enabled = get_config_bool("ankiscape_floating_xp_enabled", True)
+        popups_enabled = get_config_bool("ankiscape_popups_enabled", True)
+        review_hud_enabled = get_config_bool("ankiscape_review_hud_enabled", True)
     except Exception:
         pass
 
-    enabled_cb = QCheckBox("Enable floating pill")
+    # Section header with icon: Widget
+    widget_hdr = QWidget()
+    whl = QHBoxLayout(widget_hdr)
+    whl.setContentsMargins(0, 0, 0, 0)
+    whl.setSpacing(6)
+    try:
+        settings_icon = os.path.join(current_dir, "icon", "settings_icon.png")
+        if os.path.exists(settings_icon):
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(settings_icon).scaled(18, 18, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            whl.addWidget(lbl)
+    except Exception:
+        pass
+    hdr_lbl = QLabel("Widget")
+    hdr_lbl.setStyleSheet("font-weight: 600;")
+    whl.addWidget(hdr_lbl)
+    whl.addStretch(1)
+    set_layout.addWidget(widget_hdr)
+
+    enabled_cb = QCheckBox("Enable widget")
     enabled_cb.setChecked(floating_enabled)
     set_layout.addWidget(enabled_cb)
 
@@ -1232,7 +1296,7 @@ def show_main_menu(
     prl = QHBoxLayout(pos_row)
     prl.setContentsMargins(0, 0, 0, 0)
     prl.setSpacing(12)
-    prl.addWidget(QLabel("Position:"))
+    prl.addWidget(QLabel("Widget Position:"))
     rb_group = QButtonGroup(pos_row)
     rb_right = QRadioButton("Bottom right")
     rb_left = QRadioButton("Bottom left")
@@ -1244,6 +1308,17 @@ def show_main_menu(
     prl.addWidget(rb_right)
     prl.addStretch(1)
     set_layout.addWidget(pos_row)
+
+    # Divider
+    try:
+        from aqt.qt import QFrame  # type: ignore
+    except Exception:
+        QFrame = None  # type: ignore
+    if QFrame is not None:
+        div1 = QFrame()
+        div1.setFrameShape(QFrame.Shape.HLine)
+        div1.setFrameShadow(QFrame.Shadow.Sunken)
+        set_layout.addWidget(div1)
 
     # Disable/enable radio buttons based on checkbox
     def _sync_pos_enabled():
@@ -1258,6 +1333,79 @@ def show_main_menu(
     if callable(on_set_floating_position):
         rb_left.toggled.connect(lambda checked=False: checked and on_set_floating_position("left"))
         rb_right.toggled.connect(lambda checked=False: checked and on_set_floating_position("right"))
+
+    # Section header: Experience
+    hud_hdr = QWidget()
+    hhl = QHBoxLayout(hud_hdr)
+    hhl.setContentsMargins(0, 0, 0, 0)
+    hhl.setSpacing(6)
+    try:
+        hud_icon = os.path.join(current_dir, "icon", "achievement_icon.png")
+        if os.path.exists(hud_icon):
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(hud_icon).scaled(18, 18, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            hhl.addWidget(lbl)
+    except Exception:
+        pass
+    hud_lbl = QLabel("Experience")
+    hud_lbl.setStyleSheet("font-weight: 600;")
+    hhl.addWidget(hud_lbl)
+    hhl.addStretch(1)
+    set_layout.addWidget(hud_hdr)
+
+    review_hud_cb = QCheckBox("Enable experience HUD")
+    review_hud_cb.setChecked(review_hud_enabled)
+    set_layout.addWidget(review_hud_cb)
+
+    xp_cb = QCheckBox("Enable floating XP")
+    xp_cb.setChecked(floating_xp_enabled)
+    set_layout.addWidget(xp_cb)
+
+    # Divider
+    if QFrame is not None:
+        div2 = QFrame()
+        div2.setFrameShape(QFrame.Shape.HLine)
+        div2.setFrameShadow(QFrame.Shadow.Sunken)
+        set_layout.addWidget(div2)
+
+    # Section header: Notifications
+    notif_title = QLabel("Notifications")
+    notif_title.setStyleSheet("font-weight: 600;")
+    set_layout.addWidget(notif_title)
+
+    popups_cb = QCheckBox("Enable achievements and level up pop ups")
+    popups_cb.setChecked(popups_enabled)
+    set_layout.addWidget(popups_cb)
+
+    def _persist_bool(key: str, val: bool):
+        try:
+            if mw and getattr(mw, 'col', None):
+                mw.col.set_config(key, bool(val))
+        except Exception:
+            pass
+
+    def _apply_xp_enabled(flag: bool):
+        _persist_bool("ankiscape_floating_xp_enabled", flag)
+
+    def _apply_popups_enabled(flag: bool):
+        _persist_bool("ankiscape_popups_enabled", flag)
+
+    def _apply_review_hud_enabled(flag: bool):
+        _persist_bool("ankiscape_review_hud_enabled", flag)
+        try:
+            if not flag:
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+                    _REVIEW_HUD.hide()
+            else:
+                # If enabled, attempt to refresh HUD position/visibility
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "show"):
+                    _REVIEW_HUD.show()
+        except Exception:
+            pass
+
+    xp_cb.stateChanged.connect(lambda _=None: _apply_xp_enabled(bool(xp_cb.isChecked())))
+    popups_cb.stateChanged.connect(lambda _=None: _apply_popups_enabled(bool(popups_cb.isChecked())))
+    review_hud_cb.stateChanged.connect(lambda _=None: _apply_review_hud_enabled(bool(review_hud_cb.isChecked())))
 
     # Developer Mode controls: master toggle, reveals debug/diagnostics
     dev_block = QWidget()
@@ -1393,7 +1541,14 @@ def show_main_menu(
     set_layout.addWidget(dev_block)
 
     tabs.addTab(settings_tab, "Settings")
-    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure the AnkiScape floating button and developer tools")
+    # Set Settings icon if present
+    try:
+        settings_icon = os.path.join(current_dir, "icon", "settings_icon.png")
+        if os.path.exists(settings_icon):
+            tabs.setTabIcon(tabs.indexOf(settings_tab), QIcon(settings_icon))
+    except Exception:
+        pass
+    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure widget, experience HUD, notifications, and developer tools")
 
     layout.addWidget(tabs)
 

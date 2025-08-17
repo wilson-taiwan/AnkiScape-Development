@@ -122,9 +122,17 @@ def _initialize_debug_from_config():
 def _show_exp(exp_gained) -> None:
     """Ensure the ExpPopup exists and display exp."""
     try:
-        if not hasattr(mw, 'exp_popup'):
-            mw.exp_popup = ExpPopup(mw)
-        mw.exp_popup.show_exp(exp_gained)
+        # Respect user setting for floating XP (default True)
+        show_xp = True
+        try:
+            if mw and getattr(mw, 'col', None):
+                show_xp = bool(mw.col.get_config("ankiscape_floating_xp_enabled", True))
+        except Exception:
+            show_xp = True
+        if show_xp:
+            if not hasattr(mw, 'exp_popup'):
+                mw.exp_popup = ExpPopup(mw)
+            mw.exp_popup.show_exp(exp_gained)
         # Keep HUD progress in sync with new XP
         try:
             update_review_hud(player_data, current_skill)
@@ -509,16 +517,20 @@ def initialize_exp_popup():
 def _on_rev_show_question(*_args, **_kwargs):
     _inject_reviewer_floating_button()
     try:
-        ensure_review_hud()
-        update_review_hud(player_data, current_skill)
+        from .ui import get_config_bool  # type: ignore
+        if get_config_bool("ankiscape_review_hud_enabled", True):
+            ensure_review_hud()
+            update_review_hud(player_data, current_skill)
     except Exception:
         pass
 
 def _on_rev_show_answer(*_args, **_kwargs):
     _inject_reviewer_floating_button()
     try:
-        ensure_review_hud()
-        update_review_hud(player_data, current_skill)
+        from .ui import get_config_bool  # type: ignore
+        if get_config_bool("ankiscape_review_hud_enabled", True):
+            ensure_review_hud()
+            update_review_hud(player_data, current_skill)
     except Exception:
         pass
 

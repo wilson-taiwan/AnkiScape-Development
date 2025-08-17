@@ -32,7 +32,14 @@ def level_up_check(skill, player_data):
         if new_level > old_level:
             for lvl in range(old_level + 1, new_level + 1):
                 player_data[level_key] = lvl
-                show_level_up_dialog(skill)
+                # Respect user setting for popups
+                try:
+                    from aqt import mw  # type: ignore
+                    enabled = bool(mw.col.get_config("ankiscape_popups_enabled", True)) if getattr(mw, 'col', None) else True
+                except Exception:
+                    enabled = True
+                if enabled:
+                    show_level_up_dialog(skill)
 
 from .logic_pure import get_newly_completed_achievements
 
@@ -40,7 +47,14 @@ def check_achievements(player_data):
     newly_completed = get_newly_completed_achievements(player_data, ACHIEVEMENTS)
     for achievement in newly_completed:
         player_data["completed_achievements"].append(achievement)
-        show_achievement_dialog(achievement, ACHIEVEMENTS[achievement])
+        # Respect user setting for popups
+        try:
+            from aqt import mw  # type: ignore
+            enabled = bool(mw.col.get_config("ankiscape_popups_enabled", True)) if getattr(mw, 'col', None) else True
+        except Exception:
+            enabled = True
+        if enabled:
+            show_achievement_dialog(achievement, ACHIEVEMENTS[achievement])
 
 
 def calculate_woodcutting_probability(player_level: int, tree_probability: float) -> float:
