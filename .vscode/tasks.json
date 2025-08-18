@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Unit Tests",
+			"type": "shell",
+			"command": "/Users/wilsonyeh/Documents/AnkiScape Versions/AnkiScape-Development/.venv/bin/python",
+			"args": [
+			"command": "${workspaceFolder}/.venv/bin/python",
+			"args": [
+				"${workspaceFolder}/run_tests.py"
+			],
+			"problemMatcher": [
+				"$python"
+			],
+			"group": "test"
+		}
+	]
+}

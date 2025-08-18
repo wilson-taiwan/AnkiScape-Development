@@ -2,6 +2,7 @@
 
 import os
 from typing import Optional
+import datetime
 
 try:
     from aqt import mw  # type: ignore
@@ -36,6 +37,7 @@ try:
         QCheckBox,
         QDesktopServices,
         QUrl,
+    QEvent,
     )
     HAS_QT = True
 except Exception:
@@ -43,25 +45,120 @@ except Exception:
     mw = None  # type: ignore
     HAS_QT = False
 
-from .constants import (
-    EXP_TABLE,
-    ORE_DATA,
-    TREE_DATA,
-    BAR_DATA,
-    GEM_DATA,
-    CRAFTING_DATA,
-    ORE_IMAGES,
-    TREE_IMAGES,
-    BAR_IMAGES,
-    GEM_IMAGES,
-    CRAFTED_ITEM_IMAGES,
-    ACHIEVEMENTS,
-    current_dir,
-)
-from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+try:
+    from .constants import (
+        EXP_TABLE,
+        ORE_DATA,
+        TREE_DATA,
+        BAR_DATA,
+        GEM_DATA,
+        CRAFTING_DATA,
+        ORE_IMAGES,
+        TREE_IMAGES,
+        BAR_IMAGES,
+        GEM_IMAGES,
+        CRAFTED_ITEM_IMAGES,
+        ACHIEVEMENTS,
+        current_dir,
+    )
+except Exception:
+    # Fallback for direct module import in tests
+    from constants import (  # type: ignore
+        EXP_TABLE,
+        ORE_DATA,
+        TREE_DATA,
+        BAR_DATA,
+        GEM_DATA,
+        CRAFTING_DATA,
+        ORE_IMAGES,
+        TREE_IMAGES,
+        BAR_IMAGES,
+        GEM_IMAGES,
+        CRAFTED_ITEM_IMAGES,
+        ACHIEVEMENTS,
+        current_dir,
+    )
+try:
+    from .logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure
+except Exception:
+    from logic_pure import can_cut_tree_pure, can_mine_ore_pure, can_craft_item_pure, can_smelt_any_bar_pure  # type: ignore
+
+# Central debug logger (support both package and flat import in tests)
+try:
+    from .debug import debug_log as _debug_log  # type: ignore
+except Exception:
+    try:
+        from debug import debug_log as _debug_log  # type: ignore
+    except Exception:
+        def _debug_log(msg: str) -> None:
+            pass
 
 # Lightweight context for the open Main Menu to allow dynamic UI refreshes
 _MAIN_MENU_CTX = {"dialog": None, "smith_btn": None, "craft_btn": None, "warn_label": None}
+
+def get_config_bool(key: str, default: bool = True) -> bool:
+    """Safely read a boolean config from Anki's profile; fallback to default when unavailable.
+    This helper avoids importing aqt in callers and is easy to monkeypatch in tests.
+    """
+    try:
+        if mw and getattr(mw, 'col', None):
+            return bool(mw.col.get_config(key, default))
+    except Exception:
+        pass
+    return bool(default)
+
+def is_floating_xp_enabled() -> bool:
+    """Return True if floating XP popups are enabled (default True)."""
+    return get_config_bool("ankiscape_floating_xp_enabled", True)
+
+def is_popups_enabled() -> bool:
+    """Return True if achievement/level-up popups are enabled (default True)."""
+    return get_config_bool("ankiscape_popups_enabled", True)
+
+def migrate_legacy_settings() -> None:
+    """One-time migration from legacy setting keys to the current schema.
+    - ankiscape_hud_progress_enabled -> ankiscape_review_hud_enabled (only if new key unset).
+    Safe to call multiple times; it won't override explicit user choices.
+    """
+    try:
+        if mw and getattr(mw, 'col', None):
+            # Only migrate if the old key exists (value not None) and the new key hasn't been set.
+            try:
+                old_val = mw.col.get_config("ankiscape_hud_progress_enabled")  # type: ignore[call-arg]
+            except TypeError:
+                # Older get_config requires a default; use sentinel None to detect existence
+                old_val = mw.col.get_config("ankiscape_hud_progress_enabled", None)
+            new_exists = mw.col.get_config("ankiscape_review_hud_enabled", None) is not None
+            if old_val is not None and not new_exists:
+                mw.col.set_config("ankiscape_review_hud_enabled", bool(old_val))
+    except Exception:
+        # Never let migration issues impact runtime
+        pass
+
+def is_main_menu_open() -> bool:
+    """Return True if the consolidated main menu dialog is currently visible."""
+    try:
+        dlg = _MAIN_MENU_CTX.get("dialog")
+        return bool(dlg) and getattr(dlg, "isVisible", lambda: False)()
+    except Exception:
+        return False
+
+def focus_main_menu_if_open() -> bool:
+    """If the main menu is open, bring it to front and return True; otherwise False."""
+    try:
+        dlg = _MAIN_MENU_CTX.get("dialog")
+        if dlg and getattr(dlg, "isVisible", lambda: False)():
+            try:
+                if hasattr(dlg, "raise_"):
+                    dlg.raise_()
+                if hasattr(dlg, "activateWindow"):
+                    dlg.activateWindow()
+            except Exception:
+                pass
+            return True
+    except Exception:
+        pass
+    return False
 
 def refresh_skill_availability(can_smelt_any_bar: bool, can_craft_any_item: bool):
     """Auto-enable Smithing/Crafting buttons when they become available while the menu is open.
@@ -87,40 +184,293 @@ def refresh_skill_availability(can_smelt_any_bar: bool, can_craft_any_item: bool
         pass
 
 
+def compute_level_progress(level: int, exp: float, exp_table: list) -> tuple[int, float, int]:
+    """Pure helper for computing percent, remaining XP, and target level.
+    Returns (percent, xp_remaining, target_level). Clamps values sensibly.
+    - At max level (99 or end of table), always return 100% and 0 remaining.
+    """
+    try:
+        lvl = max(1, int(level))
+        xp = float(exp or 0)
+        table_len = len(exp_table)
+
+        # If at or above the maximum supported level, treat progress as complete.
+        # Many games cap at 99; also guard when lvl maps to the last index of the table.
+        if lvl >= 99 or lvl >= table_len:
+            return 100, 0.0, 99
+
+        # Compute thresholds for the current level segment
+        prev = float(exp_table[lvl - 1]) if (lvl - 1) < table_len else 0.0
+        nxt = float(exp_table[lvl]) if lvl < table_len else prev
+
+        # If thresholds are degenerate (e.g., at end), treat as maxed
+        if nxt <= prev:
+            return 100, 0.0, 99
+
+        # Clamp percent to [0, 100] and remaining to >= 0
+        span = nxt - prev
+        pct_float = ((xp - prev) / span) * 100.0
+        if xp >= nxt:
+            pct = 100
+            remain = 0.0
+        else:
+            pct = int(max(0.0, min(100.0, pct_float)))
+            remain = max(0.0, nxt - xp)
+
+        target_lv = min(lvl + 1, 99)
+        return pct, remain, target_lv
+    except Exception:
+        # Fallback on error: show safe defaults and a reasonable next target
+        try:
+            safe_lvl = max(1, int(level))
+        except Exception:
+            safe_lvl = 1
+        return 0, 0.0, min(safe_lvl + 1, 99)
+
+
 # UI Classes
 if HAS_QT:
+    # Shared HUD theme
+    _HUD_ACCENT = "#4CAF50"  # Material green
+    _HUD_BG = "rgba(20, 20, 20, 180)"
+    _HUD_BORDER = "rgba(255, 255, 255, 60)"
+
+    class ReviewHUD(QWidget):
+        """A compact overlay shown on the review screen (lower center).
+        Displays current skill (icon + name), level, and progress to next level.
+        """
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+            self.setAutoFillBackground(False)
+            self.setObjectName("AnkiScapeReviewHUD")
+
+            # Layout
+            root = QHBoxLayout(self)
+            root.setContentsMargins(12, 10, 12, 10)
+            root.setSpacing(10)
+
+            self.icon_lbl = QLabel()
+            self.icon_lbl.setFixedSize(28, 28)
+            root.addWidget(self.icon_lbl, 0, Qt.AlignmentFlag.AlignVCenter)
+
+            info = QVBoxLayout()
+            info.setContentsMargins(0, 0, 0, 0)
+            info.setSpacing(4)
+            self.title_lbl = QLabel("Skill")
+            self.title_lbl.setStyleSheet("color: white; font-weight: 600;")
+            info.addWidget(self.title_lbl)
+
+            # Progress row
+            self.progress = QProgressBar()
+            self.progress.setTextVisible(False)
+            self.progress.setFixedHeight(12)
+            self.progress.setRange(0, 100)
+            self.progress.setValue(0)
+            self.progress.setStyleSheet(
+                f"""
+                QProgressBar {{
+                    background-color: rgba(255,255,255,0.15);
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 6px;
+                }}
+                QProgressBar::chunk {{
+                    background-color: {_HUD_ACCENT};
+                    border-radius: 5px;
+                }}
+                """
+            )
+            info.addWidget(self.progress)
+
+            self.sub_lbl = QLabel("")
+            self.sub_lbl.setStyleSheet("color: rgba(255,255,255,0.85); font-size: 11px;")
+            info.addWidget(self.sub_lbl)
+
+            root.addLayout(info, 1)
+
+            # Aesthetic container style
+            self.setStyleSheet(
+                f"""
+                QWidget#AnkiScapeReviewHUD {{
+                    background: {_HUD_BG};
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 10px;
+                }}
+                """
+            )
+
+            # Shadow for better contrast if available
+            try:
+                from aqt.qt import QGraphicsDropShadowEffect  # type: ignore
+                shadow = QGraphicsDropShadowEffect(self)
+                shadow.setBlurRadius(18)
+                shadow.setOffset(0, 2)
+                shadow.setColor(Qt.GlobalColor.black)
+                self.setGraphicsEffect(shadow)
+            except Exception:
+                pass
+
+            # Track parent resize/move to keep position
+            try:
+                if parent is not None:
+                    parent.installEventFilter(self)
+            except Exception:
+                pass
+
+            self.hide()
+
+        def _skill_icon_path(self, skill: str) -> Optional[str]:
+            icon_map = {
+                "Mining": "mining_icon.png",
+                "Woodcutting": "woodcutting_icon.png",
+                "Smithing": "smithing_icon.png",
+                "Crafting": "crafting_icon.png",
+            }
+            fname = icon_map.get(skill)
+            if not fname:
+                return None
+            p = os.path.join(current_dir, "icon", fname)
+            return p if os.path.exists(p) else None
+
+        def _placeholder_icon_path(self) -> Optional[str]:
+            p = os.path.join(current_dir, "crafteditems", "None.png")
+            return p if os.path.exists(p) else None
+
+        def set_data(self, player_data: dict, skill: str) -> None:
+            """Update HUD content from player data and currently active skill."""
+            skill = skill or "None"
+            if skill not in ("Mining", "Woodcutting", "Smithing", "Crafting"):
+                # No skill selected: show placeholder state
+                ip = self._placeholder_icon_path()
+                if ip:
+                    pm = QPixmap(ip)
+                    self.icon_lbl.setPixmap(pm.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                else:
+                    self.icon_lbl.clear()
+                self.title_lbl.setText("No skill selected")
+                self.progress.setValue(0)
+                self.sub_lbl.setText("Open AnkiScape menu to choose a skill")
+                # Always show progress/subtext when HUD is enabled
+                try:
+                    self.progress.setVisible(True)
+                    self.sub_lbl.setVisible(True)
+                except Exception:
+                    pass
+                self.adjustSize()
+                self._reposition()
+                self.show()
+                return
+
+            # Icon
+            ip = self._skill_icon_path(skill)
+            if ip:
+                pm = QPixmap(ip)
+                self.icon_lbl.setPixmap(pm.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            else:
+                self.icon_lbl.clear()
+
+            level_key = f"{skill.lower()}_level"
+            exp_key = f"{skill.lower()}_exp"
+            level = int(player_data.get(level_key, 1) or 1)
+            exp = float(player_data.get(exp_key, 0) or 0)
+            self.title_lbl.setText(f"{skill} — Lv {level}")
+
+            # Compute progress within current level via pure helper
+            pct, remain, target_lv = compute_level_progress(level, exp, EXP_TABLE)
+            self.progress.setValue(pct)
+            self.sub_lbl.setText(f"{pct}% to Lv {target_lv} • {remain:,.0f} XP to next")
+
+            # Always show progress/subtext when HUD is enabled
+            try:
+                self.progress.setVisible(True)
+                self.sub_lbl.setVisible(True)
+            except Exception:
+                pass
+
+            self.adjustSize()
+            self._reposition()
+            self.show()
+
+        def _reposition(self) -> None:
+            try:
+                par = self.parent() if self.parent() is not None else mw
+                if par is None:
+                    return
+                pw = par.width()
+                ph = par.height()
+                self.adjustSize()
+                w = min(max(self.width(), 360), 520)
+                h = self.height()
+                x = int((pw - w) / 2)
+                # Keep clear of bottom actions/status; give more breathing room
+                y = int(ph - h - 72)
+                self.setFixedWidth(w)
+                self.move(x, y)
+            except Exception:
+                pass
+
+        def eventFilter(self, obj, event):  # type: ignore[override]
+            try:
+                et = event.type()
+                if et in (QEvent.Type.Resize, QEvent.Type.Move, QEvent.Type.Show):
+                    self._reposition()
+            except Exception:
+                pass
+            return False
+
     class ExpPopup(QLabel):
+        """Floating XP indicator that fades and floats above the HUD (lower center)."""
         def __init__(self, parent):
             super().__init__(parent)
             self.setStyleSheet(
+                f"""
+                QLabel {{
+                    background: {_HUD_BG};
+                    color: white;
+                    border: 1px solid {_HUD_BORDER};
+                    border-radius: 10px;
+                    padding: 6px 10px;
+                    font-weight: 700;
+                }}
                 """
-            background-color: rgba(70, 130, 180, 200);
-            color: white;
-            border-radius: 10px;
-            padding: 5px;
-            font-weight: bold;
-        """
             )
             self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             self.hide()
 
         def show_exp(self, exp):
-            self.setText(f"+{exp} XP")
+            # Format like +25 XP, color accent via left border
+            self.setText(f"+{int(exp)} XP")
             self.adjustSize()
             self.show()
-            self.move(self.parent().width() - self.width() - 20, self.parent().height() - 100)
+
+            # Position: centered horizontally, just above the HUD
+            try:
+                par = self.parent() if self.parent() is not None else mw
+                hud = _REVIEW_HUD
+                base_y = (hud.y() - 14) if (hud and hud.isVisible()) else (par.height() - 140)
+                x = int((par.width() - self.width()) / 2)
+                y = int(base_y)
+                self.move(x, y)
+            except Exception:
+                # Fallback to lower center
+                self.move(max(10, int((self.parent().width() - self.width()) / 2)), self.parent().height() - 140)
+
+            # Animations
             self.opacity_effect = QGraphicsOpacityEffect(self)
             self.setGraphicsEffect(self.opacity_effect)
             self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
-            self.fade_animation.setDuration(2000)
+            self.fade_animation.setDuration(1800)
             self.fade_animation.setStartValue(1.0)
             self.fade_animation.setEndValue(0.0)
             self.fade_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
             self.fade_animation.finished.connect(self.hide)
+
             self.float_animation = QPropertyAnimation(self, b"pos")
-            self.float_animation.setDuration(2000)
+            self.float_animation.setDuration(1800)
             start_pos = self.pos()
-            end_pos = start_pos - QPoint(0, 50)
+            end_pos = start_pos - QPoint(0, 36)
             self.float_animation.setStartValue(start_pos)
             self.float_animation.setEndValue(end_pos)
             self.float_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
@@ -135,9 +485,64 @@ else:
         def show_exp(self, exp):
             pass
 
+    class ReviewHUD:
+        def __init__(self, parent=None):
+            pass
+        def set_data(self, player_data: dict, skill: str) -> None:
+            pass
+
 # UI Functions
 # ...existing code...
 # Move all dialog, popup, and menu functions here from __init__.py
+
+# --- Review HUD management ---
+_REVIEW_HUD = None  # type: ignore
+
+def ensure_review_hud() -> None:
+    """Create the Review HUD if missing and attach to mw."""
+    global _REVIEW_HUD
+    try:
+        if not HAS_QT:
+            return
+        if _REVIEW_HUD is None:
+            parent = mw
+            if parent is None:
+                return
+            _REVIEW_HUD = ReviewHUD(parent)
+        # ensure on top and visible (content set by update call)
+        try:
+            _REVIEW_HUD.raise_()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+def update_review_hud(player_data: dict, current_skill: str) -> None:
+    """Update and show the Review HUD based on current data."""
+    try:
+        if not HAS_QT:
+            return
+        # Respect setting to fully disable the review HUD visuals
+        if not get_config_bool("ankiscape_review_hud_enabled", True):
+            try:
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+                    _REVIEW_HUD.hide()
+            except Exception:
+                pass
+            return
+        ensure_review_hud()
+        if _REVIEW_HUD is not None:
+            _REVIEW_HUD.set_data(player_data, current_skill)
+    except Exception:
+        pass
+
+def hide_review_hud() -> None:
+    """Hide the HUD if it exists (used outside of review screens)."""
+    try:
+        if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+            _REVIEW_HUD.hide()
+    except Exception:
+        pass
 
 def show_error_message(title: str, message: str):
     """Centralized error dialog helper."""
@@ -240,11 +645,14 @@ def show_main_menu(
     on_set_tree,
     on_set_bar,
     on_set_craft,
+    on_set_floating_enabled=None,
+    on_set_floating_position=None,
 ):
     """Show a consolidated window with tabs for Skills, Mining, Woodcutting, Smithing, Crafting,
     and quick access buttons for Stats and Achievements.
     Callbacks apply changes and handle persistence in the caller.
     """
+    _debug_log("ui.show_main_menu: enter")
     dialog = QDialog(mw)
     dialog.setWindowTitle("AnkiScape Menu")
     dialog.setMinimumWidth(720)
@@ -858,6 +1266,310 @@ def show_main_menu(
         tabs.setTabIcon(tabs.indexOf(ach_tab), QIcon(ach_icon_path))
     tabs.setTabToolTip(tabs.indexOf(ach_tab), "Review your achievements")
 
+    # Settings tab (controls)
+    settings_tab = QWidget()
+    set_layout = QVBoxLayout(settings_tab)
+    set_layout.setContentsMargins(12, 12, 12, 12)
+    set_layout.setSpacing(10)
+
+    # Load current settings (safe defaults if config unavailable)
+    floating_enabled = True
+    floating_position = "right"
+    floating_xp_enabled = True
+    popups_enabled = True
+    review_hud_enabled = True
+    try:
+        if mw and getattr(mw, 'col', None):
+            floating_enabled = bool(mw.col.get_config("ankiscape_floating_enabled", True))
+            pos = mw.col.get_config("ankiscape_floating_position", "right")
+            floating_position = pos if pos in ("left", "right") else "right"
+        floating_xp_enabled = get_config_bool("ankiscape_floating_xp_enabled", True)
+        popups_enabled = get_config_bool("ankiscape_popups_enabled", True)
+        review_hud_enabled = get_config_bool("ankiscape_review_hud_enabled", True)
+    except Exception:
+        pass
+
+    # Section header with icon: Widget
+    widget_hdr = QWidget()
+    whl = QHBoxLayout(widget_hdr)
+    whl.setContentsMargins(0, 0, 0, 0)
+    whl.setSpacing(6)
+    try:
+        settings_icon = os.path.join(current_dir, "icon", "settings_icon.png")
+        if os.path.exists(settings_icon):
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(settings_icon).scaled(18, 18, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            whl.addWidget(lbl)
+    except Exception:
+        pass
+    hdr_lbl = QLabel("Widget")
+    hdr_lbl.setStyleSheet("font-weight: 600;")
+    whl.addWidget(hdr_lbl)
+    whl.addStretch(1)
+    set_layout.addWidget(widget_hdr)
+
+    enabled_cb = QCheckBox("Enable widget")
+    enabled_cb.setChecked(floating_enabled)
+    set_layout.addWidget(enabled_cb)
+
+    pos_row = QWidget()
+    prl = QHBoxLayout(pos_row)
+    prl.setContentsMargins(0, 0, 0, 0)
+    prl.setSpacing(12)
+    prl.addWidget(QLabel("Widget Position:"))
+    rb_group = QButtonGroup(pos_row)
+    rb_right = QRadioButton("Bottom right")
+    rb_left = QRadioButton("Bottom left")
+    rb_group.addButton(rb_right)
+    rb_group.addButton(rb_left)
+    rb_right.setChecked(floating_position == "right")
+    rb_left.setChecked(floating_position == "left")
+    prl.addWidget(rb_left)
+    prl.addWidget(rb_right)
+    prl.addStretch(1)
+    set_layout.addWidget(pos_row)
+
+    # Divider
+    try:
+        from aqt.qt import QFrame  # type: ignore
+    except Exception:
+        QFrame = None  # type: ignore
+    if QFrame is not None:
+        div1 = QFrame()
+        div1.setFrameShape(QFrame.Shape.HLine)
+        div1.setFrameShadow(QFrame.Shadow.Sunken)
+        set_layout.addWidget(div1)
+
+    # Disable/enable radio buttons based on checkbox
+    def _sync_pos_enabled():
+        rb_left.setEnabled(enabled_cb.isChecked())
+        rb_right.setEnabled(enabled_cb.isChecked())
+    _sync_pos_enabled()
+    enabled_cb.stateChanged.connect(lambda _=None: _sync_pos_enabled())
+
+    # Wire persistence through callbacks if provided
+    if callable(on_set_floating_enabled):
+        enabled_cb.stateChanged.connect(lambda _=None: on_set_floating_enabled(bool(enabled_cb.isChecked())))
+    if callable(on_set_floating_position):
+        rb_left.toggled.connect(lambda checked=False: checked and on_set_floating_position("left"))
+        rb_right.toggled.connect(lambda checked=False: checked and on_set_floating_position("right"))
+
+    # Section header: Experience
+    hud_hdr = QWidget()
+    hhl = QHBoxLayout(hud_hdr)
+    hhl.setContentsMargins(0, 0, 0, 0)
+    hhl.setSpacing(6)
+    try:
+        hud_icon = os.path.join(current_dir, "icon", "achievement_icon.png")
+        if os.path.exists(hud_icon):
+            lbl = QLabel()
+            lbl.setPixmap(QPixmap(hud_icon).scaled(18, 18, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            hhl.addWidget(lbl)
+    except Exception:
+        pass
+    hud_lbl = QLabel("Experience")
+    hud_lbl.setStyleSheet("font-weight: 600;")
+    hhl.addWidget(hud_lbl)
+    hhl.addStretch(1)
+    set_layout.addWidget(hud_hdr)
+
+    review_hud_cb = QCheckBox("Enable experience HUD")
+    review_hud_cb.setChecked(review_hud_enabled)
+    set_layout.addWidget(review_hud_cb)
+
+    xp_cb = QCheckBox("Enable floating XP")
+    xp_cb.setChecked(floating_xp_enabled)
+    set_layout.addWidget(xp_cb)
+
+    # Divider
+    if QFrame is not None:
+        div2 = QFrame()
+        div2.setFrameShape(QFrame.Shape.HLine)
+        div2.setFrameShadow(QFrame.Shadow.Sunken)
+        set_layout.addWidget(div2)
+
+    # Section header: Notifications
+    notif_title = QLabel("Notifications")
+    notif_title.setStyleSheet("font-weight: 600;")
+    set_layout.addWidget(notif_title)
+
+    popups_cb = QCheckBox("Enable achievements and level up pop ups")
+    popups_cb.setChecked(popups_enabled)
+    set_layout.addWidget(popups_cb)
+
+    def _persist_bool(key: str, val: bool):
+        try:
+            if mw and getattr(mw, 'col', None):
+                mw.col.set_config(key, bool(val))
+        except Exception:
+            pass
+
+    def _apply_xp_enabled(flag: bool):
+        _persist_bool("ankiscape_floating_xp_enabled", flag)
+
+    def _apply_popups_enabled(flag: bool):
+        _persist_bool("ankiscape_popups_enabled", flag)
+
+    def _apply_review_hud_enabled(flag: bool):
+        _persist_bool("ankiscape_review_hud_enabled", flag)
+        try:
+            if not flag:
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "hide"):
+                    _REVIEW_HUD.hide()
+            else:
+                # If enabled, attempt to refresh HUD position/visibility
+                if _REVIEW_HUD is not None and hasattr(_REVIEW_HUD, "show"):
+                    _REVIEW_HUD.show()
+        except Exception:
+            pass
+
+    xp_cb.stateChanged.connect(lambda _=None: _apply_xp_enabled(bool(xp_cb.isChecked())))
+    popups_cb.stateChanged.connect(lambda _=None: _apply_popups_enabled(bool(popups_cb.isChecked())))
+    review_hud_cb.stateChanged.connect(lambda _=None: _apply_review_hud_enabled(bool(review_hud_cb.isChecked())))
+
+    # Developer Mode controls: master toggle, reveals debug/diagnostics
+    dev_block = QWidget()
+    dev_layout = QVBoxLayout(dev_block)
+    dev_layout.setContentsMargins(0, 8, 0, 0)
+    dev_layout.setSpacing(6)
+    dev_title = QLabel("Developer Mode")
+    dev_title.setStyleSheet("font-weight: 600;")
+    dev_layout.addWidget(dev_title)
+    dev_row = QWidget()
+    drl = QHBoxLayout(dev_row)
+    drl.setContentsMargins(0, 0, 0, 0)
+    drl.setSpacing(8)
+    dev_toggle = QCheckBox("Enable developer mode (turns on debug logs)")
+    dev_enabled = False
+    try:
+        if mw and getattr(mw, 'col', None):
+            dev_enabled = bool(mw.col.get_config("ankiscape_developer_mode", False))
+            # Back-compat: migrate previous key if set
+            if not dev_enabled and bool(mw.col.get_config("ankiscape_debug_enabled", False)):
+                dev_enabled = True
+                mw.col.set_config("ankiscape_developer_mode", True)
+    except Exception:
+        dev_enabled = False
+    dev_toggle.setChecked(dev_enabled)
+    drl.addWidget(dev_toggle)
+    drl.addStretch(1)
+    dev_layout.addWidget(dev_row)
+
+    # Inner panel (shown only when developer mode enabled)
+    dev_inner = QWidget()
+    dev_inner_layout = QVBoxLayout(dev_inner)
+    dev_inner_layout.setContentsMargins(12, 6, 0, 0)
+    dev_inner_layout.setSpacing(6)
+    # Row: Clear Logs + Run Tests
+    tools_row = QWidget()
+    trl = QHBoxLayout(tools_row)
+    trl.setContentsMargins(0, 0, 0, 0)
+    trl.setSpacing(8)
+    clear_btn = QPushButton("Clear Logs")
+    run_tests_btn = QPushButton("Run Unit Tests")
+    trl.addWidget(clear_btn)
+    trl.addWidget(run_tests_btn)
+    trl.addStretch(1)
+    dev_inner_layout.addWidget(tools_row)
+
+    def _apply_dev_enabled(flag: bool):
+        try:
+            if mw and getattr(mw, 'col', None):
+                mw.col.set_config("ankiscape_developer_mode", bool(flag))
+        except Exception:
+            pass
+        # Tie developer mode to debug enablement
+        try:
+            try:
+                from .debug import set_debug_enabled  # type: ignore
+            except Exception:
+                from debug import set_debug_enabled  # type: ignore
+            set_debug_enabled(bool(flag))
+        except Exception:
+            pass
+        # Show/Hide inner panel
+        try:
+            dev_inner.setVisible(bool(flag))
+        except Exception:
+            pass
+        if flag:
+            _debug_log("developer_mode: enabled via UI")
+    dev_toggle.stateChanged.connect(lambda _=None: _apply_dev_enabled(bool(dev_toggle.isChecked())))
+
+    def _clear_logs():
+        try:
+            # Remove base and rotated files
+            base = os.path.join(os.path.dirname(__file__), "ankiscape_debug.log")
+            paths = [base] + [f"{base}.{i}" for i in range(1, 6)]
+            removed_any = False
+            for p in paths:
+                try:
+                    if os.path.exists(p):
+                        os.remove(p)
+                        removed_any = True
+                except Exception:
+                    pass
+            # Feedback: lightweight message box
+            try:
+                msg = QMessageBox(mw)
+                msg.setIcon(QMessageBox.Icon.Information)
+                msg.setWindowTitle("Logs cleared")
+                msg.setText("Debug logs have been cleared." if removed_any else "No log files found to clear.")
+                msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+                msg.exec()
+            except Exception:
+                pass
+        except Exception:
+            pass
+    clear_btn.clicked.connect(_clear_logs)
+
+    def _run_tests_and_log():
+        # Run tests in-process to avoid OS handlers opening files with Anki app.
+        try:
+            _debug_log("developer_mode: running unit tests via UI (in-process)")
+            import sys, io, unittest, traceback
+            root = os.path.dirname(os.path.abspath(__file__))
+            if root not in sys.path:
+                sys.path.insert(0, root)
+            loader = unittest.TestLoader()
+            suite = loader.discover(start_dir=os.path.join(root, "tests"), pattern="test_*.py")
+            buf = io.StringIO()
+            runner = unittest.TextTestRunner(stream=buf, verbosity=2)
+            result = runner.run(suite)
+            output = buf.getvalue()
+            code = 0 if result.wasSuccessful() else 1
+            for line in output.splitlines():
+                _debug_log(f"tests: {line}")
+            _debug_log(f"developer_mode: tests finished rc={code}, failures={len(result.failures)}, errors={len(result.errors)}")
+            # User feedback
+            msg = QMessageBox(mw)
+            msg.setIcon(QMessageBox.Icon.Information if code == 0 else QMessageBox.Icon.Warning)
+            msg.setWindowTitle("Unit Tests Result")
+            msg.setText("All tests passed." if code == 0 else "Some tests failed. See debug log for details.")
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+        except Exception:
+            try:
+                _debug_log("developer_mode: test run failed with exception")
+                _debug_log(traceback.format_exc())
+            except Exception:
+                pass
+    run_tests_btn.clicked.connect(_run_tests_and_log)
+
+    dev_inner.setVisible(dev_enabled)
+    dev_layout.addWidget(dev_inner)
+    set_layout.addWidget(dev_block)
+
+    tabs.addTab(settings_tab, "Settings")
+    # Set Settings icon if present
+    try:
+        settings_icon = os.path.join(current_dir, "icon", "settings_icon.png")
+        if os.path.exists(settings_icon):
+            tabs.setTabIcon(tabs.indexOf(settings_tab), QIcon(settings_icon))
+    except Exception:
+        pass
+    tabs.setTabToolTip(tabs.indexOf(settings_tab), "Configure widget, experience HUD, notifications, and developer tools")
+
     layout.addWidget(tabs)
 
     # Footer with a subtle review link
@@ -879,7 +1591,9 @@ def show_main_menu(
     f_layout.addWidget(close)
     layout.addWidget(footer)
     dialog.setLayout(layout)
+    _debug_log("ui.show_main_menu: about to exec")
     dialog.exec()
+    _debug_log("ui.show_main_menu: dialog closed")
 
 
 def show_tree_selection_dialog(current_tree: str, woodcutting_level: int, TREE_DATA: dict, TREE_IMAGES: dict) -> Optional[str]:

@@ -13,15 +13,12 @@ from .constants import (
     CRAFTED_ITEM_IMAGES,
 )
 from aqt import mw, gui_hooks
-from aqt.utils import showInfo
-from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.reviewer import Reviewer
-import json
+import time
 import random
 import os
 import datetime
-import random
 from .logic_pure import (
     calculate_probability_with_level,
     pick_gem,
@@ -36,15 +33,26 @@ from .logic_pure import (
     can_mine_ore_pure,
     can_cut_tree_pure,
 )
-from .logic import level_up_check, check_achievements
+from .logic import level_up_check, check_achievements, calculate_woodcutting_probability, calculate_mining_probability
 from .ui import (
     ExpPopup,
     show_error_message,
     show_tree_selection_dialog,
     show_ore_selection_dialog,
     refresh_skill_availability,
+    is_main_menu_open,
+    focus_main_menu_if_open,
+    ensure_review_hud,
+    update_review_hud,
+    hide_review_hud,
+    migrate_legacy_settings,
 )
 from . import ui
+from .deck_injection_pure import DeckBrowserContent as _DBC, inject_into_deck_browser_content
+from .injectors import inject_reviewer_floating_button as _inject_reviewer_floating_button
+from .injectors import inject_overview_floating_button as _inject_overview_floating_button
+from .injectors import register_deck_browser_button as _register_deck_browser_button
+from .injectors import force_deck_browser_refresh as _force_deck_browser_refresh
 from .storage import load_player_data as storage_load_player_data, save_player_data as storage_save_player_data
 
 global card_turned, exp_awarded, answer_shown
@@ -54,6 +62,20 @@ card_turned = False
 exp_awarded = False
 
 current_skill = "None"
+
+# --- Debug logging (centralized) ---
+from .debug import debug_log  # size-rotated, disabled by default unless ANKISCAPE_DEBUG=1
+try:
+    from .debug import set_debug_enabled as _set_debug_enabled, is_debug_enabled as _is_debug_enabled
+except Exception:
+    def _set_debug_enabled(_enabled: bool) -> None:
+        pass
+    def _is_debug_enabled() -> bool:
+        return False
+
+# Guard to avoid duplicate registrations
+_ANKISCAPE_HOOKS_REGISTERED = False
+_LAST_MENU_OPEN_TS = 0.0
 
 def show_review_popup():
     ui.show_review_popup()
@@ -81,6 +103,63 @@ def initialize_skill():
     ui.update_menu_visibility(current_skill)
 
 
+def _initialize_debug_from_config():
+    try:
+        enabled = False
+        if mw and getattr(mw, 'col', None):
+            # New: developer mode controls logging
+            enabled = bool(mw.col.get_config("ankiscape_developer_mode", False))
+            # Back-compat: honor previous key if present and new key missing
+            if not enabled:
+                enabled = bool(mw.col.get_config("ankiscape_debug_enabled", False))
+        _set_debug_enabled(enabled)
+        if enabled:
+            debug_log("debug: enabled from config on profile load (developer mode)")
+    except Exception:
+        pass
+
+
+# --- Small helpers to reduce duplication ---
+def _show_exp(exp_gained) -> None:
+    """Ensure the ExpPopup exists and display exp."""
+    try:
+        # Respect user setting for floating XP (default True)
+        show_xp = True
+        try:
+            if mw and getattr(mw, 'col', None):
+                show_xp = bool(mw.col.get_config("ankiscape_floating_xp_enabled", True))
+        except Exception:
+            show_xp = True
+        if show_xp:
+            if not hasattr(mw, 'exp_popup'):
+                mw.exp_popup = ExpPopup(mw)
+            mw.exp_popup.show_exp(exp_gained)
+        # Keep HUD progress in sync with new XP
+        try:
+            update_review_hud(player_data, current_skill)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
+def _refresh_skill_availability() -> None:
+    """Recompute and refresh Smithing/Crafting availability in the menu."""
+    try:
+        can_craft_any = any(
+            can_craft_item_pure(
+                player_data.get("crafting_level", 1),
+                player_data.get("inventory", {}),
+                item_name,
+                CRAFTING_DATA,
+            )
+            for item_name in CRAFTING_DATA.keys()
+        )
+        refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
+    except Exception:
+        pass
+
+
 def show_skill_selection():
     global current_skill
     selected = ui.show_skill_selection_dialog(current_skill, can_smelt_any_bar())
@@ -98,6 +177,11 @@ def save_skill(skill, dialog):
         # Persist immediately so the selection survives window close
         try:
             mw.col.set_config("ankiscape_current_skill", current_skill)
+        except Exception:
+            pass
+        # Update the HUD immediately so users see the new skill progress without waiting for XP
+        try:
+            update_review_hud(player_data, current_skill)
         except Exception:
             pass
         if dialog:
@@ -155,11 +239,8 @@ def on_crafting_answer():
     except Exception:
         pass
 
-    if hasattr(mw, 'exp_popup'):
-        mw.exp_popup.show_exp(exp_gained)
-    else:
-        mw.exp_popup = ExpPopup(mw)
-        mw.exp_popup.show_exp(exp_gained)
+    _refresh_skill_availability()
+    _show_exp(exp_gained)
 
 def show_bar_selection():
     selected = ui.show_bar_selection_dialog(
@@ -198,6 +279,37 @@ def show_ore_selection():
 
 
 def _on_main_menu():
+    def _set_floating_enabled(val: bool):
+        try:
+            mw.col.set_config("ankiscape_floating_enabled", bool(val))
+        except Exception:
+            pass
+        # Re-inject on current screens for immediate effect
+        try:
+            _inject_reviewer_floating_button()
+        except Exception:
+            pass
+        try:
+            _inject_overview_floating_button()
+        except Exception:
+            pass
+
+    def _set_floating_position(pos: str):
+        try:
+            if pos not in ("left", "right"):
+                pos = "right"
+            mw.col.set_config("ankiscape_floating_position", pos)
+        except Exception:
+            pass
+        try:
+            _inject_reviewer_floating_button()
+        except Exception:
+            pass
+        try:
+            _inject_overview_floating_button()
+        except Exception:
+            pass
+
     ui.show_main_menu(
         player_data,
         current_skill,
@@ -206,7 +318,9 @@ def _on_main_menu():
         on_set_ore=lambda ore: _set_value("current_ore", ore),
         on_set_tree=lambda tree: _set_value("current_tree", tree),
         on_set_bar=lambda bar: _set_value("current_bar", bar),
-    on_set_craft=lambda item: _set_value("current_craft", item),
+        on_set_craft=lambda item: _set_value("current_craft", item),
+        on_set_floating_enabled=_set_floating_enabled,
+        on_set_floating_position=_set_floating_position,
     )
 
 
@@ -216,7 +330,15 @@ def _set_value(key: str, value):
 
 
 def initialize_menu():
+    debug_log("initialize_menu: creating AnkiScape menu")
     ui.create_menu(on_main_menu=_on_main_menu)
+    # Refresh Deck Browser so injected content becomes visible after login
+    try:
+        debug_log("initialize_menu: forcing deck browser refresh")
+        _force_deck_browser_refresh()
+    except Exception:
+        debug_log("initialize_menu: deck browser refresh failed")
+        pass
 
 
 # Main functionality
@@ -256,11 +378,9 @@ def on_smithing_answer():
     except Exception:
         pass
 
-    if hasattr(mw, 'exp_popup'):
-        mw.exp_popup.show_exp(exp_gained)
-    else:
-        mw.exp_popup = ExpPopup(mw)
-        mw.exp_popup.show_exp(exp_gained)
+    _refresh_skill_availability()
+    _show_exp(exp_gained)
+from .logic import calculate_woodcutting_probability, calculate_mining_probability
 
 
 def on_woodcutting_answer():
@@ -281,11 +401,7 @@ def on_woodcutting_answer():
         check_achievements(player_data)
         save_player_data()
 
-        if hasattr(mw, 'exp_popup'):
-            mw.exp_popup.show_exp(exp_gained)
-        else:
-            mw.exp_popup = ExpPopup(mw)
-            mw.exp_popup.show_exp(exp_gained)
+    _show_exp(exp_gained)
 
 
 from .logic import calculate_woodcutting_probability, calculate_mining_probability
@@ -327,21 +443,8 @@ def on_good_answer():
             save_player_data()
 
             # If the main menu is open, auto-enable Smithing/Crafting when they become possible.
-            try:
-                # Crafting availability might change if gems/bars are produced by mining flows elsewhere.
-                can_craft_any = any(
-                    can_craft_item_pure(player_data.get("crafting_level", 1), player_data.get("inventory", {}), item_name, CRAFTING_DATA)
-                    for item_name in CRAFTING_DATA.keys()
-                )
-                refresh_skill_availability(can_smelt_any_bar(), can_craft_any)
-            except Exception:
-                pass
-
-            if hasattr(mw, 'exp_popup'):
-                mw.exp_popup.show_exp(exp_gained)
-            else:
-                mw.exp_popup = ExpPopup(mw)
-                mw.exp_popup.show_exp(exp_gained)
+            _refresh_skill_availability()
+            _show_exp(exp_gained)
 
     elif current_skill == "Woodcutting":
         on_woodcutting_answer()
@@ -374,11 +477,22 @@ def on_card_did_show(card):
     card_turned = True
     exp_awarded = False
     answer_shown = False
+    # Ensure/update HUD when a review card is shown
+    try:
+        ensure_review_hud()
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 
 def on_show_answer(reviewer):
     global answer_shown
     answer_shown = True
+    # Keep HUD in sync when flipping
+    try:
+        update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
 
 ## show_error_message now provided by ui.show_error_message
@@ -400,16 +514,208 @@ def initialize_exp_popup():
     mw.exp_popup = ExpPopup(mw)
 
 
-# Set up hooks
-addHook("profileLoaded", load_player_data)
-addHook("profileLoaded", initialize_exp_popup)
-addHook("profileLoaded", initialize_skill)
-addHook("profileLoaded", initialize_menu)
+# Flexible wrappers to handle version differences in hook signatures
+def _on_rev_show_question(*_args, **_kwargs):
+    _inject_reviewer_floating_button()
+    try:
+        from .ui import get_config_bool  # type: ignore
+        if get_config_bool("ankiscape_review_hud_enabled", True):
+            ensure_review_hud()
+            update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
-gui_hooks.reviewer_did_show_question.append(on_card_did_show)
-gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
-gui_hooks.reviewer_did_show_answer.append(on_show_answer)
+def _on_rev_show_answer(*_args, **_kwargs):
+    _inject_reviewer_floating_button()
+    try:
+        from .ui import get_config_bool  # type: ignore
+        if get_config_bool("ankiscape_review_hud_enabled", True):
+            ensure_review_hud()
+            update_review_hud(player_data, current_skill)
+    except Exception:
+        pass
 
-Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
+# Ensure the floating button is injected on the deck Overview as it refreshes
+def _on_overview_did_refresh(overview):
+    try:
+        _inject_overview_floating_button(overview)
+    except Exception:
+        pass
+    # Hide HUD off the review screen
+    try:
+        hide_review_hud()
+    except Exception:
+        pass
+
+# Centralized hook registration
+try:
+    from . import hooks as _hooks
+    _hooks.register_hooks(
+        {
+            "profile_loaded": [
+                load_player_data,
+                initialize_exp_popup,
+                initialize_skill,
+                _initialize_debug_from_config,
+                migrate_legacy_settings,
+                initialize_menu,
+                (lambda: _register_deck_browser_button()),
+            ],
+            "reviewer_question": [on_card_did_show, _on_rev_show_question],
+            "reviewer_answer": [on_card_did_show, on_show_answer, _on_rev_show_answer],
+            "answer_wrapper": on_answer_card,
+        }
+    )
+    # Overview: inject after refresh so the icon is always present on the Study Now screen
+    try:
+        try:
+            gui_hooks.overview_did_refresh.remove(_on_overview_did_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        gui_hooks.overview_did_refresh.append(_on_overview_did_refresh)  # type: ignore[attr-defined]
+    except Exception:
+        # Fallback for environments without overview_did_refresh: defer after will_refresh
+        try:
+            from aqt.qt import QTimer  # type: ignore
+        except Exception:
+            QTimer = None  # type: ignore
+        def _on_overview_will_refresh(overview):
+            if QTimer is not None:
+                try:
+                    QTimer.singleShot(0, lambda: _inject_overview_floating_button(overview))
+                except Exception:
+                    pass
+            else:
+                try:
+                    _inject_overview_floating_button(overview)
+                except Exception:
+                    pass
+        try:
+            try:
+                gui_hooks.overview_will_refresh.remove(_on_overview_will_refresh)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            gui_hooks.overview_will_refresh.append(_on_overview_will_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+except Exception:
+    # Fallback: in case hooks module import fails, keep behavior by direct registration
+    try:
+        addHook("profileLoaded", load_player_data)
+        addHook("profileLoaded", initialize_exp_popup)
+        addHook("profileLoaded", initialize_skill)
+        addHook("profileLoaded", migrate_legacy_settings)
+        addHook("profileLoaded", initialize_menu)
+        addHook("profileLoaded", lambda: _register_deck_browser_button())
+    except Exception:
+        pass
+    try:
+        gui_hooks.reviewer_did_show_question.append(on_card_did_show)
+        gui_hooks.reviewer_did_show_answer.append(on_card_did_show)
+        gui_hooks.reviewer_did_show_answer.append(on_show_answer)
+        gui_hooks.reviewer_did_show_question.append(_on_rev_show_question)
+        gui_hooks.reviewer_did_show_answer.append(_on_rev_show_answer)
+        Reviewer._answerCard = wrap(Reviewer._answerCard, on_answer_card, "around")
+        # Overview: inject after refresh so the icon is always present on the Study Now screen
+        try:
+            try:
+                gui_hooks.overview_did_refresh.remove(_on_overview_did_refresh)  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            gui_hooks.overview_did_refresh.append(_on_overview_did_refresh)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+    except Exception:
+        pass
 
 # Menu is created on profile load via initialize_menu
+
+    # --- Handle JS bridge messages from injected buttons ---
+    def _on_js_message(handled, message, context):  # type: ignore[no-redef]
+        """Respond to messages sent via pycmd() in injected JS."""
+        try:
+            if isinstance(message, str):
+                if message == "ankiscape_open_menu":
+                    debug_log("bridge: ankiscape_open_menu received")
+                    global _LAST_MENU_OPEN_TS
+                    now = time.time()
+                    if is_main_menu_open():
+                        debug_log("bridge: menu already open; focusing")
+                        try:
+                            focus_main_menu_if_open()
+                        except Exception:
+                            pass
+                    elif now - _LAST_MENU_OPEN_TS > 0.4:  # debounce
+                        _LAST_MENU_OPEN_TS = now
+                        debug_log("bridge: opening main menu via _on_main_menu")
+                        try:
+                            try:
+                                from aqt.qt import QTimer  # type: ignore
+                            except Exception:
+                                QTimer = None  # type: ignore
+                            if QTimer is not None:
+                                QTimer.singleShot(0, _on_main_menu)
+                                debug_log("bridge: scheduled _on_main_menu with QTimer")
+                            else:
+                                _on_main_menu()
+                                debug_log("bridge: called _on_main_menu directly (no QTimer)")
+                        except Exception:
+                            debug_log("bridge: _on_main_menu raised; swallowed")
+                            pass
+                    return (True, message)
+                if message.startswith("ankiscape_log:"):
+                    try:
+                        debug_log(f"js: {message[len('ankiscape_log:'):]}")
+                    except Exception:
+                        pass
+                    # Not handled; allow default processing to continue
+                    return (handled, message)
+                # Hardening: do not intercept native Anki navigation messages
+                try:
+                    low = message.lower()
+                except Exception:
+                    low = ""
+                if (
+                    low.startswith("open:")
+                    or low in ("decks", "add", "browse", "stats", "sync")
+                    or low == "study" or low == "review" or low == "start"
+                    or low.startswith("study") or low.startswith("review") or low.startswith("start")
+                ):
+                    return (False, message)
+        except Exception:
+            debug_log("bridge: exception in _on_js_message")
+            pass
+        return (handled, message)
+
+    try:
+        # Avoid duplicate registrations on addon reload
+        gui_hooks.webview_did_receive_js_message.remove(_on_js_message)
+    except Exception:
+        pass
+    try:
+        gui_hooks.webview_did_receive_js_message.append(_on_js_message)
+    except Exception:
+        pass
+
+# --- Deck Browser bottom button integration ---
+
+
+def _force_deck_browser_refresh():
+    """Trigger a Deck Browser rerender so injected content becomes visible immediately."""
+    try:
+        db = getattr(mw, "deckBrowser", None)
+        if db is None:
+            debug_log("force_refresh: no deckBrowser present")
+            return
+        # Prefer refresh when available, otherwise renderPage
+        if hasattr(db, "refresh"):
+            debug_log("force_refresh: calling deckBrowser.refresh()")
+            db.refresh()
+        elif hasattr(db, "renderPage"):
+            debug_log("force_refresh: calling deckBrowser.renderPage()")
+            db.renderPage()
+        else:
+            debug_log("force_refresh: deckBrowser has no refresh or renderPage")
+    except Exception:
+        debug_log("force_refresh: failed to refresh")
+        pass
