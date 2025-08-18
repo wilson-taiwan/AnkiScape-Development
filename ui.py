@@ -242,10 +242,11 @@ if HAS_QT:
         def __init__(self, parent=None):
             super().__init__(parent)
             self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-            self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+            # Important: keep this as a child widget inside Anki's main window.
+            # Avoid ToolTip/Window flags that would make it a top-level, always-on-top window
+            # and leak over other macOS apps.
             try:
-                # Ensure the overlay never steals focus or input
-                self.setWindowFlag(Qt.WindowType.ToolTip)
+                self.setWindowFlags(Qt.WindowType.Widget)
             except Exception:
                 pass
             self.setAutoFillBackground(False)
@@ -503,17 +504,68 @@ else:
 # --- Review HUD management ---
 _REVIEW_HUD = None  # type: ignore
 
+def _cleanup_extra_huds() -> None:
+    """Hide and delete any stray HUD widgets from prior versions or reloads.
+    Ensures only a single child HUD exists under mw and no top-level HUDs remain.
+    """
+    if not HAS_QT:
+        return
+    try:
+        try:
+            from aqt.qt import QApplication  # type: ignore
+        except Exception:
+            QApplication = None  # type: ignore
+        # Remove top-level HUDs that may have been created with ToolTip flags
+        if QApplication is not None:
+            for w in QApplication.topLevelWidgets():
+                try:
+                    if getattr(w, "objectName", lambda: "")() == "AnkiScapeReviewHUD":
+                        if _REVIEW_HUD is None or w is not _REVIEW_HUD:
+                            try:
+                                w.hide()
+                            except Exception:
+                                pass
+                            try:
+                                w.deleteLater()
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+        # Also remove duplicate children under mw
+        par = mw
+        if par is not None:
+            from aqt.qt import QWidget as _QW  # type: ignore
+            for child in par.findChildren(_QW, "AnkiScapeReviewHUD"):
+                if _REVIEW_HUD is None or child is not _REVIEW_HUD:
+                    try:
+                        child.hide()
+                    except Exception:
+                        pass
+                    try:
+                        child.deleteLater()
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+
 def ensure_review_hud() -> None:
     """Create the Review HUD if missing and attach to mw."""
     global _REVIEW_HUD
     try:
         if not HAS_QT:
             return
+        # Proactively clean up any leftover HUD windows from previous runs
+        _cleanup_extra_huds()
         if _REVIEW_HUD is None:
             parent = mw
             if parent is None:
                 return
             _REVIEW_HUD = ReviewHUD(parent)
+            try:
+                # Ensure correct parenting in case older instances detached
+                _REVIEW_HUD.setParent(parent)
+            except Exception:
+                pass
         # ensure on top and visible (content set by update call)
         try:
             _REVIEW_HUD.raise_()
