@@ -115,6 +115,26 @@ def is_popups_enabled() -> bool:
     """Return True if achievement/level-up popups are enabled (default True)."""
     return get_config_bool("ankiscape_popups_enabled", True)
 
+def migrate_legacy_settings() -> None:
+    """One-time migration from legacy setting keys to the current schema.
+    - ankiscape_hud_progress_enabled -> ankiscape_review_hud_enabled (only if new key unset).
+    Safe to call multiple times; it won't override explicit user choices.
+    """
+    try:
+        if mw and getattr(mw, 'col', None):
+            # Only migrate if the old key exists (value not None) and the new key hasn't been set.
+            try:
+                old_val = mw.col.get_config("ankiscape_hud_progress_enabled")  # type: ignore[call-arg]
+            except TypeError:
+                # Older get_config requires a default; use sentinel None to detect existence
+                old_val = mw.col.get_config("ankiscape_hud_progress_enabled", None)
+            new_exists = mw.col.get_config("ankiscape_review_hud_enabled", None) is not None
+            if old_val is not None and not new_exists:
+                mw.col.set_config("ankiscape_review_hud_enabled", bool(old_val))
+    except Exception:
+        # Never let migration issues impact runtime
+        pass
+
 def is_main_menu_open() -> bool:
     """Return True if the consolidated main menu dialog is currently visible."""
     try:

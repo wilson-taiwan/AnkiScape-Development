@@ -45,6 +45,7 @@ from .ui import (
     ensure_review_hud,
     update_review_hud,
     hide_review_hud,
+    migrate_legacy_settings,
 )
 from . import ui
 from .deck_injection_pure import DeckBrowserContent as _DBC, inject_into_deck_browser_content
@@ -556,6 +557,7 @@ try:
                 initialize_exp_popup,
                 initialize_skill,
                 _initialize_debug_from_config,
+                migrate_legacy_settings,
                 initialize_menu,
                 (lambda: _register_deck_browser_button()),
             ],
@@ -602,6 +604,7 @@ except Exception:
         addHook("profileLoaded", load_player_data)
         addHook("profileLoaded", initialize_exp_popup)
         addHook("profileLoaded", initialize_skill)
+        addHook("profileLoaded", migrate_legacy_settings)
         addHook("profileLoaded", initialize_menu)
         addHook("profileLoaded", lambda: _register_deck_browser_button())
     except Exception:

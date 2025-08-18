@@ -18,6 +18,7 @@ Older versions stored different keys and shapes (for example a single `total_exp
 - Unknown/extra keys -> left intact (forward-compatible)
 - Type normalization for numeric fields (ints/floats)
 - Config keys introduced after restructure (e.g., `ankiscape_current_skill`, floating button settings) -> loaded with defaults if absent
+- Settings consolidation: legacy `ankiscape_hud_progress_enabled` is migrated to `ankiscape_review_hud_enabled` (Experience HUD) when the new key is unset
 
 ## Guarantees
 

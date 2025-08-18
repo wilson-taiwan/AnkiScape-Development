@@ -23,3 +23,17 @@ Logging is disabled by default. To enable it temporarily while debugging, set an
 
 The logger rotates at ~1 MB with up to 3 backups (`ankiscape_debug.log.1`, etc.).
 The log files are git-ignored and should not be shipped in releases.
+
+## What is covered
+
+- Core game logic, level/exp math, and probability helpers
+- Storage migration and default data shape guarantees
+- Settings helpers and toggles (Experience HUD, floating XP, popups)
+- UI progress calculations and boundary conditions
+- Hook registration planning (dry-run)
+- A no-Qt integration smoke test that dynamically loads the add-on as a package and validates:
+	- HUD ensure/update/hide are gated by the Experience HUD toggle
+	- Floating XP toasts respect the Floating XP toggle
+	- Overview refresh hides the HUD
+
+These tests aim to catch regressions in gating, migrations, and core behavior without requiring a full Anki GUI runtime.

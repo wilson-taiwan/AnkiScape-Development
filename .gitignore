@@ -5,3 +5,26 @@ ankiscape_debug.log.*
 # Python cache
 __pycache__/
 *.pyc
+
+# macOS and editor noise
+.DS_Store
+.idea/
+.vscode/
+
+# Virtual environments
+.venv/
+venv/
+
+# Test and type-check caches
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# Anki addon local metadata (created by Anki on install; do not commit)
+meta.json
+
+# Build artifacts
+*.ankiaddon
+dist/
+build/
