@@ -6,7 +6,9 @@
 			"type": "shell",
 			"command": "/Users/wilsonyeh/Documents/AnkiScape Versions/AnkiScape-Development/.venv/bin/python",
 			"args": [
-				"/Users/wilsonyeh/Documents/AnkiScape Versions/AnkiScape-Development/run_tests.py"
+			"command": "${workspaceFolder}/.venv/bin/python",
+			"args": [
+				"${workspaceFolder}/run_tests.py"
 			],
 			"problemMatcher": [
 				"$python"
