@@ -243,6 +243,11 @@ if HAS_QT:
             super().__init__(parent)
             self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+            try:
+                # Ensure the overlay never steals focus or input
+                self.setWindowFlag(Qt.WindowType.ToolTip)
+            except Exception:
+                pass
             self.setAutoFillBackground(False)
             self.setObjectName("AnkiScapeReviewHUD")
 

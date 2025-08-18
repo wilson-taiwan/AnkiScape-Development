@@ -46,6 +46,9 @@ def should_force_pass_through(message: object) -> bool:
         return True
     if low.startswith("study") or low.startswith("review") or low.startswith("start"):
         return True
+    # Common actions in Browser/Editor
+    if low in ("preview", "previewer", "card-info", "addcards"):
+        return True
     return False
 
 def build_reviewer_js(position: str, icon_data_uri: str) -> str:
@@ -567,7 +570,12 @@ def register_deck_browser_button() -> None:
                     return (False, message)
         except Exception as e:
             _debug_log(f"injectors.bridge: handler exception: {e}")
-        # Pass through for all other messages unchanged
+        # Default: do not intercept messages we don't recognize
+        try:
+            if isinstance(message, str):
+                return (False, message)
+        except Exception:
+            pass
         return (handled, message)
 
     def _did_render(deck_browser):  # type: ignore[no-redef]

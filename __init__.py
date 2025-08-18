@@ -680,22 +680,22 @@ except Exception:
                     or low in ("decks", "add", "browse", "stats", "sync")
                     or low == "study" or low == "review" or low == "start"
                     or low.startswith("study") or low.startswith("review") or low.startswith("start")
+                    or low in ("preview", "previewer", "card-info", "addcards")
                 ):
                     return (False, message)
         except Exception:
             debug_log("bridge: exception in _on_js_message")
             pass
+        # Default: do not intercept messages we don't recognize
+        try:
+            if isinstance(message, str):
+                return (False, message)
+        except Exception:
+            pass
         return (handled, message)
 
-    try:
-        # Avoid duplicate registrations on addon reload
-        gui_hooks.webview_did_receive_js_message.remove(_on_js_message)
-    except Exception:
-        pass
-    try:
-        gui_hooks.webview_did_receive_js_message.append(_on_js_message)
-    except Exception:
-        pass
+    # Note: JS bridge hook is registered in injectors.register_deck_browser_button
+    # to keep one consistent handler and predictable order.
 
 # --- Deck Browser bottom button integration ---
 
